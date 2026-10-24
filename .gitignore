@@ -1,0 +1,5 @@
+config.py
+cards.json
+__pycache__/
+*.pyc
+.DS_Store
