@@ -1,5 +1,7 @@
-config.py
+settings.json
+setup.flag
 cards.json
 __pycache__/
 *.pyc
 .DS_Store
+CLAUDE.md

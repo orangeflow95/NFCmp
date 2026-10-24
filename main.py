@@ -4,12 +4,14 @@
 #   - Jellyfin: it gets locked to the card automatically.
 #   - Any other app (Netflix, YouTube, ...): open the ESP32's page on your phone
 #     and paste the link to what you're watching.
+# The first time it's powered on, it opens a setup Wi-Fi network (see onboarding.py).
 import json
-import socket
 import time
 import network
 from machine import I2C, Pin
 import config
+import onboarding
+import web
 from pn532 import PN532
 
 try:
@@ -21,6 +23,9 @@ CARDS_FILE = "cards.json"
 MEDIA_TYPES = {"Movie": "movie", "Episode": "episode"} # Jellyfin item type -> Roku deep link mediaType
 NETFLIX_APP_ID = "12"
 YOUTUBE_APP_ID = "837"
+WIFI_TIMEOUT_MS = 20000
+
+settings = onboarding.load_settings() # Wi-Fi, Roku and Jellyfin, entered in setup mode
 
 def load_cards():
     try:
@@ -34,23 +39,38 @@ def save_cards(cards):
         json.dump(cards, f)
 
 def connect_wifi():
+    """Joins the saved Wi-Fi. Returns the WLAN, or None if it can't connect in time."""
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     if not wlan.isconnected():
-        print("Connecting to Wi-Fi...")
-        wlan.connect(config.WIFI_SSID, config.WIFI_PASSWORD)
+        print(f"Connecting to Wi-Fi {settings['wifi_ssid']}...")
+        wlan.connect(settings["wifi_ssid"], settings.get("wifi_password", ""))
+        deadline = time.ticks_add(time.ticks_ms(), WIFI_TIMEOUT_MS)
         while not wlan.isconnected():
+            if time.ticks_diff(deadline, time.ticks_ms()) <= 0:
+                print("Couldn't connect to Wi-Fi.")
+                return None
             time.sleep_ms(500)
     print(f"Wi-Fi connected: {wlan.ifconfig()[0]}")
     return wlan
 
+def find_roku():
+    print("Looking for the Roku...")
+    ip = onboarding.discover_roku()
+    if ip:
+        settings["roku_ip"] = ip
+        onboarding.save_settings(settings)
+        print(f"Found the Roku at {ip}.")
+    else:
+        print("No Roku found. Is it on the same Wi-Fi? Enter its IP in setup mode (http://<player ip>/setup).")
+
 def roku_post(path):
     """Sends a Roku ECP POST command."""
-    r = requests.post(f"http://{config.ROKU_IP}:8060/{path}", headers={"Content-Length": "0"}, timeout=5)
+    r = requests.post(f"http://{settings['roku_ip']}:8060/{path}", headers={"Content-Length": "0"}, timeout=5)
     r.close()
 
 def roku_query(what):
-    r = requests.get(f"http://{config.ROKU_IP}:8060/query/{what}", timeout=5)
+    r = requests.get(f"http://{settings['roku_ip']}:8060/query/{what}", timeout=5)
     try:
         return r.text
     finally:
@@ -92,9 +112,11 @@ def play(card):
 
 def now_playing():
     """Returns the item currently playing in the Jellyfin Roku app, or None."""
+    if not jellyfin_set_up():
+        return None
     r = requests.get(
-        f"{config.JELLYFIN_IP}/Sessions?activeWithinSeconds=600",
-        headers={"Authorization": f'MediaBrowser Token="{config.API_KEY}"'},
+        f"{settings['jellyfin_url']}/Sessions?activeWithinSeconds=600",
+        headers={"Authorization": f'MediaBrowser Token="{settings["jellyfin_key"]}"'},
         timeout=5,
     )
     try:
@@ -105,6 +127,9 @@ def now_playing():
         if session.get("Client") == config.JELLYFIN_CLIENT and session.get("NowPlayingItem"):
             return session["NowPlayingItem"]
     return None
+
+def jellyfin_set_up():
+    return bool(settings.get("jellyfin_url") and settings.get("jellyfin_key"))
 
 def _segment_after(text, marker):
     i = text.find(marker)
@@ -138,41 +163,17 @@ def content_id_from_link(app_id, link):
     path = link.split("?")[0].split("#")[0].rstrip("/")
     return path.split("/")[-1] or None
 
-def unquote(text):
-    """Decodes a URL-encoded form value."""
-    parts = text.replace("+", " ").split("%")
-    out = bytearray(parts[0].encode())
-    for part in parts[1:]:
-        try:
-            out.append(int(part[:2], 16))
-            out.extend(part[2:].encode())
-        except ValueError:
-            out.extend(("%" + part).encode())
-    return bytes(out).decode()
-
-def parse_query(path):
-    fields = {}
-    if "?" in path:
-        for pair in path.split("?", 1)[1].split("&"):
-            key_value = pair.split("=", 1)
-            if len(key_value) == 2:
-                fields[unquote(key_value[0])] = unquote(key_value[1])
-    return fields
-
-PAGE_HEAD = """<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>Link card</title><style>body{font-family:-apple-system,sans-serif;max-width:30em;margin:2em auto;padding:0 1em}
-.t{font-size:1.1em;width:100%;padding:.6em;margin:.4em 0;box-sizing:border-box}label{display:inline-block;margin:.5em 1em .5em 0}</style>"""
+SETUP_CONFIRM = f"""<h2>Change settings</h2><p>The player will restart and open its own Wi-Fi network,
+<b>{onboarding.AP_NAME}</b>. Join it on your phone to change the Wi-Fi, Roku or Jellyfin settings.</p>
+<form action=/setup><button class=t name=confirm value=1>Restart in setup mode</button></form>"""
+SETUP_RESTARTING = f"<h2>Restarting…</h2><p>Join the <b>{onboarding.AP_NAME}</b> Wi-Fi network on your phone.</p>"
 
 class LinkPage:
     """Tiny web server on the ESP32 where the phone pastes the link for a new card."""
 
     def __init__(self, ip, port):
         self.url = f"http://{ip}/" if port == 80 else f"http://{ip}:{port}/"
-        self.sock = socket.socket()
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(socket.getaddrinfo("0.0.0.0", port)[0][-1])
-        self.sock.listen(2)
-        self.sock.setblocking(False)
+        self.sock = web.listen(port)
         self.waiting = None # (app_id, app_name) while waiting for a link
         self.result = None
 
@@ -185,29 +186,32 @@ class LinkPage:
 
     def poll(self):
         """Answers one waiting request, if any. Returns the new card once a link is submitted."""
-        try:
-            client, _ = self.sock.accept()
-        except OSError:
+        client = web.accept(self.sock)
+        if not client:
             return None
+        restart = False
         try:
-            client.settimeout(3)
-            request = client.recv(2048).decode()
-            path = request.split(" ")[1] if request.count(" ") >= 2 else "/"
-            client.sendall(b"HTTP/1.0 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n")
-            client.sendall((PAGE_HEAD + self._handle(parse_query(path))).encode())
+            _, path, _, form = web.read_request(client)
+            if path == "/setup":
+                restart = bool(form.get("confirm"))
+                web.send(client, "Settings", SETUP_RESTARTING if restart else SETUP_CONFIRM)
+            else:
+                web.send(client, "Link card", self._handle(form))
         except OSError:
             pass
         finally:
             client.close()
+        if restart:
+            onboarding.request_setup()
         if self.result:
             self.waiting = None
         return self.result
 
     def _handle(self, form):
         if self.result:
-            return f"<h2>✅ Card locked to {self.result['title']}</h2>"
+            return f"<h2>✅ Card locked to {web.escape(self.result['title'])}</h2>"
         if not self.waiting:
-            return "<h2>No card is waiting</h2><p>Tap a new card, then start something on the TV.</p>"
+            return "<h2>No card is waiting</h2><p>Tap a new card, then start something on the TV.</p><p><a href=/setup>Change settings</a></p>"
         app_id, app_name = self.waiting
         error = ""
         if form.get("link"):
@@ -216,9 +220,9 @@ class LinkPage:
                 kind = "series" if form.get("kind") == "series" else "movie"
                 title = form.get("name", "").strip() or f"{app_name} {content_id}"
                 self.result = {"app": app_id, "id": content_id, "title": title, "media_type": kind}
-                return f"<h2>✅ Card locked to {title}</h2><p>Tap the card any time to play it.</p>"
+                return f"<h2>✅ Card locked to {web.escape(title)}</h2><p>Tap the card any time to play it.</p>"
             error = "<p style=color:#c00>Couldn't find a title in that link. Try the share link from the app.</p>"
-        return f"""<h2>What are you watching on {app_name}?</h2>{error}
+        return f"""<h2>What are you watching on {web.escape(app_name)}?</h2>{error}
 <form action="/"><input class=t name=link placeholder="Paste the share link" required autofocus>
 <input class=t name=name placeholder="Name (optional), e.g. Arcane">
 <label><input type=radio name=kind value=movie checked> Movie</label>
@@ -288,7 +292,7 @@ def learn(uid, cards, taps, page):
 
         try:
             app_id, app_name, playing = tv_state()
-            if app_id == config.JELLYFIN_APP_ID:
+            if app_id == config.JELLYFIN_APP_ID and jellyfin_set_up():
                 item = now_playing()
                 if not item:
                     jellyfin_stopped = True
@@ -329,7 +333,13 @@ class TapReader:
         return uid
 
 def main():
+    if onboarding.setup_requested() or not settings.get("wifi_ssid"):
+        onboarding.run_portal(settings)
     wlan = connect_wifi()
+    if not wlan:
+        onboarding.run_portal(settings, f"Couldn't join {settings['wifi_ssid']}. Check the name and password.")
+    if not settings.get("roku_ip"):
+        find_roku()
     reader = PN532(I2C(0, sda=Pin(config.NFC_SDA_PIN), scl=Pin(config.NFC_SCL_PIN), freq=100000))
     print(f"NFC reader ready: {reader.firmware}")
     page = LinkPage(wlan.ifconfig()[0], config.WEB_PORT)
@@ -339,7 +349,7 @@ def main():
 
     while True:
         if not wlan.isconnected():
-            connect_wifi()
+            connect_wifi() # Keep retrying; the router may be restarting
         uid = taps.poll()
         if uid:
             print(f"\n[NFC] Card tapped: {uid}")
