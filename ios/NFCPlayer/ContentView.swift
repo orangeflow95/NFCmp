@@ -13,13 +13,14 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             SearchView()
-                .navigationTitle("NFC Player")
+                .navigationTitle("NFCMP")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         StatusBadge(status: player.status)
                             .labelStyle(.titleAndIcon)
                             .font(.footnote)
+                            .fixedSize() // iOS 26 toolbar bubbles otherwise cut the words off
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
@@ -64,8 +65,8 @@ private struct StatusBadge: View {
 
     var body: some View {
         switch status {
-        case .online: Label("Player online", systemImage: "circle.fill").foregroundStyle(.green)
-        case .offline: Label("Player not found", systemImage: "circle.fill").foregroundStyle(.orange)
+        case .online: Label("Online", systemImage: "circle.fill").foregroundStyle(.green)
+        case .offline: Label("Offline", systemImage: "circle.fill").foregroundStyle(.orange)
         case .checking: Label("Checking", systemImage: "circle.dotted").foregroundStyle(.secondary)
         }
     }

@@ -24,9 +24,9 @@ targets:
     info:
       path: NFCPlayer/Info.plist
       properties:
-        CFBundleDisplayName: NFC Player
+        CFBundleDisplayName: NFCMP
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        NSLocalNetworkUsageDescription: NFC Player finds your movie card player on your home network to search your media library.
+        NSLocalNetworkUsageDescription: NFCMP finds your movie card player on your home network to search your media library.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
