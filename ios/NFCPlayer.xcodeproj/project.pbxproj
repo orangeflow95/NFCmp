@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		715ADEB033DBDFD2271F8E52 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */; };
 		7D9013BE7AC23A640FCAB65F /* NFCPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */; };
 		B7494B07D3FD5751E149C554 /* PlayerLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A713FDE62FB26B7FB04F154F /* PlayerLink.swift */; };
 		CD0EF427EE6F5A70BAADC832 /* Notifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9478C01C521D691F27D8D4 /* Notifier.swift */; };
@@ -18,6 +19,7 @@
 		5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCPlayerApp.swift; sourceTree = "<group>"; };
 		5A2E30DA49849E40BFD69216 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		68E8E1E8C5BF7A3135C27E8D /* NFCPlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NFCPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A713FDE62FB26B7FB04F154F /* PlayerLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerLink.swift; sourceTree = "<group>"; };
 		AD9478C01C521D691F27D8D4 /* Notifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifier.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -26,6 +28,7 @@
 		299ED77B663A9D1F4E5B1869 /* NFCPlayer */ = {
 			isa = PBXGroup;
 			children = (
+				A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */,
 				5A2E30DA49849E40BFD69216 /* ContentView.swift */,
 				5506BBA80F5084EB13B9F622 /* Info.plist */,
 				5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */,
@@ -59,6 +62,7 @@
 			buildConfigurationList = DE8EEF3533C878B3CF4377C5 /* Build configuration list for PBXNativeTarget "NFCPlayer" */;
 			buildPhases = (
 				0D2736D580846852B3C30B28 /* Sources */,
+				57FEE9AE50465268713A804E /* Resources */,
 			);
 			buildRules = (
 			);
@@ -81,6 +85,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					BBD7FE7DD262D4784CB5DDF7 = {
+						DevelopmentTeam = Q753P6JLVL;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -103,6 +108,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		57FEE9AE50465268713A804E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				715ADEB033DBDFD2271F8E52 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		0D2736D580846852B3C30B28 /* Sources */ = {
@@ -245,6 +261,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q753P6JLVL;
 				INFOPLIST_FILE = NFCPlayer/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -265,6 +282,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q753P6JLVL;
 				INFOPLIST_FILE = NFCPlayer/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

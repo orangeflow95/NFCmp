@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFA21F"/>
+      <stop offset="1" stop-color="#F2501C"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#7A1E00" flood-opacity="0.30"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- NFC waves coming off the card's top-right corner -->
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-width="46">
+    <path d="M640 330 A95 95 0 0 1 735 425"/>
+    <path d="M640 220 A205 205 0 0 1 845 425" opacity="0.75"/>
+    <path d="M640 110 A315 315 0 0 1 955 425" opacity="0.5"/>
+  </g>
+  <!-- Upright movie card with a play button and a title line -->
+  <g filter="url(#shadow)" transform="rotate(-9 400 610)">
+    <rect x="215" y="330" width="370" height="520" rx="52" fill="#FFFFFF"/>
+    <path d="M345 470 L345 640 L485 555 Z" fill="#F2501C" stroke="#F2501C" stroke-width="26" stroke-linejoin="round"/>
+    <rect x="285" y="725" width="230" height="34" rx="17" fill="#F2501C" opacity="0.35"/>
+  </g>
+</svg>

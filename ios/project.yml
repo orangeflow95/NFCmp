@@ -1,4 +1,5 @@
-# XcodeGen spec for the iPhone app. Regenerate the Xcode project after editing:
+# XcodeGen spec for the iPhone app. The icon's source is AppIcon.svg (render to 1024px PNG).
+# Regenerate the Xcode project after editing:
 #   cd ios && xcodegen
 name: NFCPlayer
 options:
@@ -18,6 +19,8 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        DEVELOPMENT_TEAM: Q753P6JLVL
     info:
       path: NFCPlayer/Info.plist
       properties:
