@@ -3,6 +3,8 @@
 
 JELLYFIN_APP_ID = "592369" # Roku channel ID of the Jellyfin app
 JELLYFIN_CLIENT = "Jellyfin Roku" # Session "Client" name of the TV app in Jellyfin
+PLEX_APP_ID = "13535" # Roku channel ID of the Plex app
+PLEX_PRODUCT = "Plex for Roku" # Player "product" name of the TV app in Plex
 
 # PN532 I2C pins on the ESP32-S3
 NFC_SDA_PIN = 8

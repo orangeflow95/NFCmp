@@ -1,7 +1,7 @@
 # onboarding.py
 # First-time setup. With no saved settings, or if the saved Wi-Fi can't be
 # joined, the player opens its own Wi-Fi network. Joining it on a phone pops up
-# a setup page for the home Wi-Fi, the Roku and Jellyfin. Settings are saved to
+# a setup page for the home Wi-Fi, the Roku and a media server. Settings are saved to
 # settings.json on the board's flash.
 import json
 import os
@@ -14,8 +14,10 @@ import web
 SETTINGS_FILE = "settings.json"
 SETUP_FLAG_FILE = "setup.flag" # Written by the link page's "Change settings" button
 AP_NAME = "NFC Movie Player"
-FIELDS = ("wifi_ssid", "wifi_password", "roku_ip", "jellyfin_url", "jellyfin_key")
-SECRET_FIELDS = ("wifi_password", "jellyfin_key") # Left blank on the form = keep the saved value
+FIELDS = ("wifi_ssid", "wifi_password", "roku_ip", "media_server", "server_url", "server_user", "server_password")
+SECRET_FIELDS = ("wifi_password", "server_password") # Left blank on the form = keep the saved value
+SERVERS = {"jellyfin": "Jellyfin", "plex": "Plex"}
+SERVER_KEYS = ("media_server", "server_url", "server_user", "server_password", "server_token")
 PORTAL_TIMEOUT_S = 300 # With saved settings, give up after this long without a visit and retry the Wi-Fi
 
 def load_settings():
@@ -107,8 +109,13 @@ class CaptiveDNS:
 def form_page(settings, networks, error):
     value = lambda key: web.escape(settings.get(key, ""))
     keep = " (blank keeps the saved one)"
+    signed_in = " (blank keeps you signed in)" if settings.get("server_token") else ""
     options = "".join(f'<option value="{web.escape(name)}">' for name in networks)
-    error = f"<p style=color:#c00>{web.escape(error)}</p>" if error else ""
+    servers = "".join(
+        f'<option value={key}{" selected" if settings.get("media_server") == key else ""}>{name}</option>'
+        for key, name in [("", "None")] + list(SERVERS.items())
+    )
+    error = f"<p class=e>{web.escape(error)}</p>" if error else ""
     return f"""<h2>Set up your movie player</h2>{error}
 <form method=post action=/save>
 <h3>Wi-Fi</h3>
@@ -118,14 +125,24 @@ def form_page(settings, networks, error):
 <h3>Roku</h3>
 <input class=t name=roku_ip value="{value('roku_ip')}" placeholder="Roku IP address" inputmode=decimal>
 <p class=h>Leave blank to find it automatically. On the Roku: Settings → Network → About.</p>
-<h3>Jellyfin (optional)</h3>
-<input class=t name=jellyfin_url value="{value('jellyfin_url')}" placeholder="Server, e.g. http://192.168.1.5:8096" autocapitalize=off autocorrect=off>
-<input class=t type=password name=jellyfin_key placeholder="API key{keep if settings.get('jellyfin_key') else ''}">
-<p class=h>In Jellyfin: Dashboard → API Keys. Without Jellyfin, new cards are linked by pasting a share link.</p>
-<button class=t>Save and connect</button></form>"""
+<h3>Personal media server (optional)</h3>
+<select class=t name=media_server id=ms onchange=sv()>{servers}</select>
+<p class=h>With a server, new cards learn what you play automatically. Without one, they're linked by pasting a share link.</p>
+<div id=srv>
+<input class=t name=server_url value="{value('server_url')}" placeholder="Server address" autocapitalize=off autocorrect=off>
+<p class=h>Leave blank to find it automatically.</p>
+<input class=t name=server_user id=su value="{value('server_user')}" autocapitalize=off autocorrect=off>
+<input class=t type=password name=server_password id=sp>
+<p class=h id=sh></p>
+</div>
+<button class=t>Save and connect</button></form>
+<script>function sv(){{var p=ms.value=="plex";srv.hidden=!ms.value;
+su.placeholder=p?"Plex email or username":"Jellyfin username";
+sp.placeholder=(p?"Plex":"Jellyfin")+" password{signed_in}";
+sh.textContent=p?"Your plex.tv account. Two-step verification isn't supported yet.":"The account you use in the Jellyfin app on the TV.";}}sv()</script>"""
 
 def apply_form(settings, form):
-    """Returns the settings updated from the submitted form."""
+    """Returns the settings updated from the submitted form, and a problem with them or None."""
     new = dict(settings)
     for key in FIELDS:
         value = form.get(key, "")
@@ -133,11 +150,21 @@ def apply_form(settings, form):
             new[key] = value.strip()
         elif value:
             new[key] = value
-    url = new["jellyfin_url"].rstrip("/")
+    server = new["media_server"]
+    if server not in SERVERS:
+        for key in SERVER_KEYS:
+            new.pop(key, None)
+        return new, None
+    url = new["server_url"].rstrip("/")
     if url and not url.startswith("http"):
         url = "http://" + url
-    new["jellyfin_url"] = url
-    return new
+    new["server_url"] = url
+    if form.get("server_password") or any((new.get(key) or "") != (settings.get(key) or "") for key in SERVER_KEYS[:3]):
+        new.pop("server_token", None) # Sign in again on the next start
+        new["server_password"] = form.get("server_password", "")
+    if not new["server_user"] and "server_token" not in new:
+        return new, f"Enter your {SERVERS[server]} username."
+    return new, None
 
 def run_portal(settings, error=None):
     """Runs the setup network until settings are saved, then restarts. Never returns."""
@@ -170,10 +197,14 @@ def run_portal(settings, error=None):
                     # A phone checking for internet: send it to the setup page
                     web.send(client, status="302 Found", headers=f"Location: http://{ip}/\r\n")
                 elif method == "POST" and path == "/save":
-                    settings = apply_form(settings, form)
-                    save_settings(settings)
-                    saved = True
-                    web.send(client, "Saved", f"""<h2>✅ Saved</h2><p>The player is restarting and joining
+                    new, problem = apply_form(settings, form)
+                    if problem:
+                        web.send(client, "Set up", form_page(new, networks, problem))
+                    else:
+                        settings = new
+                        save_settings(settings)
+                        saved = True
+                        web.send(client, "Saved", f"""<h2>✅ Saved</h2><p>The player is restarting and joining
 <b>{web.escape(settings['wifi_ssid'])}</b>. You can switch your phone back to your home Wi-Fi.</p>
 <p>If it can't connect, the <b>{AP_NAME}</b> network comes back so you can fix the settings.</p>""")
                 else:

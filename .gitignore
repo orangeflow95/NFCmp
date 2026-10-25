@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 .DS_Store
 CLAUDE.md
+ios/NFCPlayer.xcodeproj/xcuserdata/
+ios/NFCPlayer.xcodeproj/project.xcworkspace/xcuserdata/

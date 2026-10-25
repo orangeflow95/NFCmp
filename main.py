@@ -1,7 +1,7 @@
 # Runs on an ESP32-S3 with MicroPython and a PN532 NFC reader over I2C.
 # Tap a linked card: the TV turns on and plays what's linked to it.
 # Tap a new card, then start something on the TV:
-#   - Jellyfin: it gets locked to the card automatically.
+#   - Jellyfin or Plex: it gets locked to the card automatically.
 #   - Any other app (Netflix, YouTube, ...): open the ESP32's page on your phone
 #     and paste the link to what you're watching.
 # The first time it's powered on, it opens a setup Wi-Fi network (see onboarding.py).
@@ -11,6 +11,8 @@ import network
 from machine import I2C, Pin
 import config
 import onboarding
+import phone
+import servers
 import web
 from pn532 import PN532
 
@@ -25,7 +27,8 @@ NETFLIX_APP_ID = "12"
 YOUTUBE_APP_ID = "837"
 WIFI_TIMEOUT_MS = 20000
 
-settings = onboarding.load_settings() # Wi-Fi, Roku and Jellyfin, entered in setup mode
+settings = onboarding.load_settings() # Wi-Fi, Roku and media server, entered in setup mode
+alerts = phone.NoPhone() # Bluetooth link to the iPhone app, started in main()
 
 def load_cards():
     try:
@@ -110,27 +113,6 @@ def play(card):
     except Exception as e:
         print(f"Roku Error: {e}")
 
-def now_playing():
-    """Returns the item currently playing in the Jellyfin Roku app, or None."""
-    if not jellyfin_set_up():
-        return None
-    r = requests.get(
-        f"{settings['jellyfin_url']}/Sessions?activeWithinSeconds=600",
-        headers={"Authorization": f'MediaBrowser Token="{settings["jellyfin_key"]}"'},
-        timeout=5,
-    )
-    try:
-        sessions = r.json()
-    finally:
-        r.close()
-    for session in sessions:
-        if session.get("Client") == config.JELLYFIN_CLIENT and session.get("NowPlayingItem"):
-            return session["NowPlayingItem"]
-    return None
-
-def jellyfin_set_up():
-    return bool(settings.get("jellyfin_url") and settings.get("jellyfin_key"))
-
 def _segment_after(text, marker):
     i = text.find(marker)
     if i < 0:
@@ -164,16 +146,17 @@ def content_id_from_link(app_id, link):
     return path.split("/")[-1] or None
 
 SETUP_CONFIRM = f"""<h2>Change settings</h2><p>The player will restart and open its own Wi-Fi network,
-<b>{onboarding.AP_NAME}</b>. Join it on your phone to change the Wi-Fi, Roku or Jellyfin settings.</p>
+<b>{onboarding.AP_NAME}</b>. Join it on your phone to change the Wi-Fi, Roku or media server settings.</p>
 <form action=/setup><button class=t name=confirm value=1>Restart in setup mode</button></form>"""
 SETUP_RESTARTING = f"<h2>Restarting…</h2><p>Join the <b>{onboarding.AP_NAME}</b> Wi-Fi network on your phone.</p>"
 
 class LinkPage:
     """Tiny web server on the ESP32 where the phone pastes the link for a new card."""
 
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, problem=None):
         self.url = f"http://{ip}/" if port == 80 else f"http://{ip}:{port}/"
         self.sock = web.listen(port)
+        self.problem = problem # Shown on the idle page, e.g. a media server sign-in that failed
         self.waiting = None # (app_id, app_name) while waiting for a link
         self.result = None
 
@@ -211,7 +194,8 @@ class LinkPage:
         if self.result:
             return f"<h2>✅ Card locked to {web.escape(self.result['title'])}</h2>"
         if not self.waiting:
-            return "<h2>No card is waiting</h2><p>Tap a new card, then start something on the TV.</p><p><a href=/setup>Change settings</a></p>"
+            problem = f"<p class=e>⚠️ {web.escape(self.problem)}</p>" if self.problem else ""
+            return f"<h2>No card is waiting</h2>{problem}<p>Tap a new card, then start something on the TV.</p><p><a href=/setup>Change settings</a></p>"
         app_id, app_name = self.waiting
         error = ""
         if form.get("link"):
@@ -221,7 +205,7 @@ class LinkPage:
                 title = form.get("name", "").strip() or f"{app_name} {content_id}"
                 self.result = {"app": app_id, "id": content_id, "title": title, "media_type": kind}
                 return f"<h2>✅ Card locked to {web.escape(title)}</h2><p>Tap the card any time to play it.</p>"
-            error = "<p style=color:#c00>Couldn't find a title in that link. Try the share link from the app.</p>"
+            error = "<p class=e>Couldn't find a title in that link. Try the share link from the app.</p>"
         return f"""<h2>What are you watching on {web.escape(app_name)}?</h2>{error}
 <form action="/"><input class=t name=link placeholder="Paste the share link" required autofocus>
 <input class=t name=name placeholder="Name (optional), e.g. Arcane">
@@ -243,38 +227,44 @@ def ask_phone(uid, cards, taps, page, app_id, app_name):
     """Waits for a link to what's playing on the link page and locks it to the card."""
     print(f"Something is playing on {app_name}. Open {page.url} on your phone and paste the link.")
     page.ask(app_id, app_name)
+    alerts.send("link", app_name)
     deadline = time.ticks_add(time.ticks_ms(), config.LINK_TIMEOUT_S * 1000)
     while time.ticks_diff(deadline, time.ticks_ms()) > 0:
         if taps.poll():
             page.stop()
             print("❌ Cancelled. Card not linked.")
+            alerts.send("idle")
             return
         card = page.poll()
         if card:
             cards[uid] = card
             save_cards(cards)
             print(f"🔒 Locked '{card['title']}' ({app_name}) to card {uid}.")
+            alerts.send("locked", card["title"])
             return
         time.sleep_ms(100)
     page.stop()
     print("⌛ Timed out waiting for a link. Card not linked.")
+    alerts.send("idle")
 
 def learn(uid, cards, taps, page):
     """Waits for something to start on the TV and locks it to the card. Any tap cancels."""
     print(f"New card! Start something on the TV within {config.LEARN_TIMEOUT_S}s to lock it to this card.")
+    alerts.send("learn")
     try:
         wake_tv()
     except Exception as e:
         print(f"Roku Error: {e}")
 
     # Ignore whatever is already playing, unless it gets stopped and started again
+    server_app = servers.roku_app(settings)
     try:
-        before = now_playing()
+        before = servers.now_playing(settings) if server_app else None
     except Exception as e:
-        print(f"Jellyfin Error: {e}")
+        print(f"Media Server Error: {e}")
         before = None
-    before_id = before["Id"] if before else None
-    jellyfin_stopped = before is None
+    before_id = before["id"] if before else None
+    server_stopped = before is None
     try:
         app_id, _, playing = tv_state()
         before_app = app_id if playing else None
@@ -288,18 +278,20 @@ def learn(uid, cards, taps, page):
         # Check the TV every 3 seconds, watching for a cancel tap in between
         if wait_with_taps(taps, page, 3000):
             print("❌ Cancelled. Card not linked.")
+            alerts.send("idle")
             return
 
         try:
             app_id, app_name, playing = tv_state()
-            if app_id == config.JELLYFIN_APP_ID and jellyfin_set_up():
-                item = now_playing()
-                if not item:
-                    jellyfin_stopped = True
-                elif jellyfin_stopped or item["Id"] != before_id:
-                    cards[uid] = {"id": item["Id"], "title": item.get("Name", "Unknown Movie"), "type": item.get("Type")}
+            if server_app and app_id == server_app:
+                card = servers.now_playing(settings)
+                if not card:
+                    server_stopped = True
+                elif server_stopped or card["id"] != before_id:
+                    cards[uid] = card
                     save_cards(cards)
                     print(f"🔒 Locked '{cards[uid]['title']}' to card {uid}.")
+                    alerts.send("locked", cards[uid]["title"])
                     return
             elif not playing:
                 tv_stopped = True
@@ -310,6 +302,7 @@ def learn(uid, cards, taps, page):
             print(f"TV Error: {e}")
 
     print("⌛ Timed out waiting for something to play. Card not linked.")
+    alerts.send("idle")
 
 class TapReader:
     """Reports each tap once, even if the card stays on the reader."""
@@ -333,6 +326,7 @@ class TapReader:
         return uid
 
 def main():
+    global alerts
     if onboarding.setup_requested() or not settings.get("wifi_ssid"):
         onboarding.run_portal(settings)
     wlan = connect_wifi()
@@ -340,9 +334,14 @@ def main():
         onboarding.run_portal(settings, f"Couldn't join {settings['wifi_ssid']}. Check the name and password.")
     if not settings.get("roku_ip"):
         find_roku()
+    ip, mask = wlan.ifconfig()[:2]
+    problem = servers.set_up(settings, servers.broadcast_address(ip, mask))
+    if problem:
+        print(f"⚠️ {problem}")
     reader = PN532(I2C(0, sda=Pin(config.NFC_SDA_PIN), scl=Pin(config.NFC_SCL_PIN), freq=100000))
     print(f"NFC reader ready: {reader.firmware}")
-    page = LinkPage(wlan.ifconfig()[0], config.WEB_PORT)
+    page = LinkPage(ip, config.WEB_PORT, problem)
+    alerts = phone.start(onboarding.AP_NAME, page.url)
     taps = TapReader(reader)
     cards = load_cards()
     print(f"{len(cards)} card(s) linked. Waiting for a tap...")

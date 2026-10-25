@@ -2,10 +2,13 @@
 # Helpers for the player's tiny non-blocking HTTP servers (setup portal and link page).
 import socket
 
+# color-scheme makes the page follow the phone's light or dark mode; .h is a hint, .e an error
 PAGE_HEAD = """<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>{title}</title><style>body{{font-family:-apple-system,sans-serif;max-width:30em;margin:2em auto;padding:0 1em}}
+<meta name=color-scheme content="light dark"><title>{title}</title><style>:root{{color-scheme:light dark}}
+body{{font-family:-apple-system,sans-serif;max-width:30em;margin:2em auto;padding:0 1em}}
 .t{{font-size:1.1em;width:100%;padding:.6em;margin:.4em 0;box-sizing:border-box}}label{{display:inline-block;margin:.5em 1em .5em 0}}
-.h{{color:#666;font-size:.9em;margin:.2em 0 1em}}h3{{margin:1.5em 0 .3em}}</style>"""
+.h{{color:#666;font-size:.9em;margin:.2em 0 1em}}h3{{margin:1.5em 0 .3em}}.e{{color:#c00}}
+@media (prefers-color-scheme:dark){{.h{{color:#aaa}}.e{{color:#ff6b6b}}}}</style>"""
 
 def listen(port):
     sock = socket.socket()
@@ -35,6 +38,14 @@ def unquote(text):
         except ValueError:
             out.extend(("%" + part).encode())
     return bytes(out).decode()
+
+def quote(text):
+    """URL-encodes a form value."""
+    out = ""
+    for byte in text.encode():
+        char = chr(byte)
+        out += char if byte < 128 and (char.isalpha() or char.isdigit() or char in "-_.~") else "%%%02X" % byte
+    return out
 
 def parse_form(text):
     fields = {}

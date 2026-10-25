@@ -1,0 +1,31 @@
+# XcodeGen spec for the iPhone app. Regenerate the Xcode project after editing:
+#   cd ios && xcodegen
+name: NFCPlayer
+options:
+  bundleIdPrefix: com.orangeflow
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  NFCPlayer:
+    type: application
+    platform: iOS
+    sources: [NFCPlayer]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.orangeflow.nfcplayer
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: NFCPlayer/Info.plist
+      properties:
+        CFBundleDisplayName: NFC Player
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UIBackgroundModes: [bluetooth-central]
+        NSBluetoothAlwaysUsageDescription: NFC Player uses Bluetooth to stay connected to your movie card player and alert you when a new card needs a link.
+        NSLocalNetworkUsageDescription: NFC Player opens your movie card player's page on your home network.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
