@@ -11,6 +11,8 @@ targets:
     type: application
     platform: iOS
     sources: [NFCPlayer]
+    scheme:
+      testTargets: [NFCPlayerUITests]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.orangeflow.nfcplayer
@@ -30,3 +32,16 @@ targets:
         NSLocalNetworkUsageDescription: NFCMP finds your movie card player on your home network to search your media library.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+  NFCPlayerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [NFCPlayerUITests]
+    dependencies:
+      - target: NFCPlayer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.orangeflow.nfcplayer.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: Q753P6JLVL

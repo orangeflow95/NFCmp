@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		45EB4BC7F4E3A8B9C1545BD2 /* WriteCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90602B8C1680DC89DC04CE9C /* WriteCardView.swift */; };
+		6AE9F13EAE1A450A5C089EDF /* ScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECFEF061477675D8E26656E /* ScreenshotTests.swift */; };
 		715ADEB033DBDFD2271F8E52 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */; };
 		7D9013BE7AC23A640FCAB65F /* NFCPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */; };
 		B0A6E709F646E7A622ED163F /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FAA34C68B893635E4EE3FE /* Player.swift */; };
@@ -16,8 +17,20 @@
 		EEA0248EFA7F1655C1ABBE09 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2E30DA49849E40BFD69216 /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		F50DFA26B22CDB8B05D1AAF8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4734B034535CFF7366C514DD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BBD7FE7DD262D4784CB5DDF7;
+			remoteInfo = NFCPlayer;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		1ECFEF061477675D8E26656E /* ScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTests.swift; sourceTree = "<group>"; };
 		46DE4396495B65A1C4F15F85 /* CardLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardLookup.swift; sourceTree = "<group>"; };
+		49A8DCE80E77147C99B31DD0 /* NFCPlayerUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NFCPlayerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5506BBA80F5084EB13B9F622 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCPlayerApp.swift; sourceTree = "<group>"; };
 		5A2E30DA49849E40BFD69216 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -48,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				299ED77B663A9D1F4E5B1869 /* NFCPlayer */,
+				E268CE4EBC8EF27E4DD0F9F9 /* NFCPlayerUITests */,
 				B58D116B078DA99C66F32D90 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,13 +70,40 @@
 			isa = PBXGroup;
 			children = (
 				68E8E1E8C5BF7A3135C27E8D /* NFCPlayer.app */,
+				49A8DCE80E77147C99B31DD0 /* NFCPlayerUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E268CE4EBC8EF27E4DD0F9F9 /* NFCPlayerUITests */ = {
+			isa = PBXGroup;
+			children = (
+				1ECFEF061477675D8E26656E /* ScreenshotTests.swift */,
+			);
+			path = NFCPlayerUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0B07A20401938A7004F264BD /* NFCPlayerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 09A5018BB84858A0EBA1CE82 /* Build configuration list for PBXNativeTarget "NFCPlayerUITests" */;
+			buildPhases = (
+				23FDB006160C45853D3DF82C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8C511AE1F56D0C7E9E32E074 /* PBXTargetDependency */,
+			);
+			name = NFCPlayerUITests;
+			packageProductDependencies = (
+			);
+			productName = NFCPlayerUITests;
+			productReference = 49A8DCE80E77147C99B31DD0 /* NFCPlayerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		BBD7FE7DD262D4784CB5DDF7 /* NFCPlayer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DE8EEF3533C878B3CF4377C5 /* Build configuration list for PBXNativeTarget "NFCPlayer" */;
@@ -90,6 +131,11 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0B07A20401938A7004F264BD = {
+						DevelopmentTeam = Q753P6JLVL;
+						ProvisioningStyle = Automatic;
+						TestTargetID = BBD7FE7DD262D4784CB5DDF7;
+					};
 					BBD7FE7DD262D4784CB5DDF7 = {
 						DevelopmentTeam = Q753P6JLVL;
 						ProvisioningStyle = Automatic;
@@ -111,6 +157,7 @@
 			projectRoot = "";
 			targets = (
 				BBD7FE7DD262D4784CB5DDF7 /* NFCPlayer */,
+				0B07A20401938A7004F264BD /* NFCPlayerUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -140,9 +187,45 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		23FDB006160C45853D3DF82C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AE9F13EAE1A450A5C089EDF /* ScreenshotTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		8C511AE1F56D0C7E9E32E074 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BBD7FE7DD262D4784CB5DDF7 /* NFCPlayer */;
+			targetProxy = F50DFA26B22CDB8B05D1AAF8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		236A48753C68EC18A1EA6DBB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Q753P6JLVL;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.orangeflow.nfcplayer.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NFCPlayer;
+			};
+			name = Debug;
+		};
 		2A543161D33AF646D745216F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -304,9 +387,38 @@
 			};
 			name = Debug;
 		};
+		DEDFB4853BAC6013B5505300 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = Q753P6JLVL;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.orangeflow.nfcplayer.uitests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = NFCPlayer;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		09A5018BB84858A0EBA1CE82 /* Build configuration list for PBXNativeTarget "NFCPlayerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				236A48753C68EC18A1EA6DBB /* Debug */,
+				DEDFB4853BAC6013B5505300 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		5D7298DB3ADA05CA09F13B02 /* Build configuration list for PBXProject "NFCPlayer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

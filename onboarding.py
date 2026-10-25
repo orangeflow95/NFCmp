@@ -127,7 +127,7 @@ def form_page(settings, networks, error):
 <p class=h>Leave blank to find it automatically. On the Roku: Settings → Network → About.</p>
 <h3>Personal media server (optional)</h3>
 <select class=t name=media_server id=ms onchange=sv()>{servers}</select>
-<p class=h>With a server, new cards learn what you play automatically. Without one, they're linked by pasting a share link.</p>
+<p class=h>Lets the NFCMP app search your library, and lets a blank card learn what you start playing on the TV.</p>
 <div id=srv>
 <input class=t name=server_url value="{value('server_url')}" placeholder="Server address" autocapitalize=off autocorrect=off>
 <p class=h>Leave blank to find it automatically.</p>
