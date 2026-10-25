@@ -1,5 +1,6 @@
 # web.py
 # Helpers for the player's tiny non-blocking HTTP servers (setup portal and link page).
+import json
 import socket
 
 # color-scheme makes the page follow the phone's light or dark mode; .h is a hint, .e an error
@@ -88,6 +89,10 @@ def read_request(client):
     if method == "POST":
         form.update(parse_form(body.decode()))
     return method, path, headers, form
+
+def send_json(client, value):
+    client.sendall(b"HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n")
+    client.sendall(json.dumps(value).encode())
 
 def send(client, title="", body="", status="200 OK", headers=""):
     client.sendall(f"HTTP/1.0 {status}\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n{headers}\r\n".encode())

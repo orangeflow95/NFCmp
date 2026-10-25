@@ -27,8 +27,6 @@ targets:
         CFBundleDisplayName: NFC Player
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
-        UIBackgroundModes: [bluetooth-central]
-        NSBluetoothAlwaysUsageDescription: NFC Player uses Bluetooth to stay connected to your movie card player and alert you when a new card needs a link.
-        NSLocalNetworkUsageDescription: NFC Player opens your movie card player's page on your home network.
+        NSLocalNetworkUsageDescription: NFC Player finds your movie card player on your home network to search your media library.
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true

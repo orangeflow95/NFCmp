@@ -133,6 +133,34 @@ def set_up(settings, broadcast):
         print(f"Signed in to {name}.")
     return None
 
+def search_library(settings, text):
+    """Movies and shows on the media server matching text, for the iPhone app's search.
+
+    Each has the server's item ID and, when the server knows it, the TMDB ID, so
+    the app can match it to TMDB results. Returns None if the server isn't
+    signed in or isn't supported yet (Plex).
+    """
+    if settings.get("media_server") != "jellyfin" or not roku_app(settings):
+        return None
+    url = settings["server_url"]
+    r = requests.get(
+        f"{url}/Items?searchTerm={web.quote(text)}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=ProviderIds&Limit=20",
+        headers={"Authorization": f'MediaBrowser Token="{settings["server_token"]}"'},
+        timeout=5,
+    )
+    try:
+        items = r.json()["Items"]
+    finally:
+        r.close()
+    return [{
+        "id": item["Id"],
+        "title": item.get("Name", "Untitled"),
+        "year": item.get("ProductionYear"),
+        "kind": "tv" if item.get("Type") == "Series" else "movie",
+        "tmdb": (item.get("ProviderIds") or {}).get("Tmdb"),
+        "poster": f"{url}/Items/{item['Id']}/Images/Primary?maxHeight=300",
+    } for item in items]
+
 def now_playing(settings):
     """Returns a card for what the Roku is playing from the media server, or None."""
     if settings.get("media_server") == "plex":

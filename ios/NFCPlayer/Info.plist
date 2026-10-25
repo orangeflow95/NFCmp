@@ -25,14 +25,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>NFC Player uses Bluetooth to stay connected to your movie card player and alert you when a new card needs a link.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>NFC Player opens your movie card player's page on your home network.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>bluetooth-central</string>
-	</array>
+	<string>NFC Player finds your movie card player on your home network to search your media library.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

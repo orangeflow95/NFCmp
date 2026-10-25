@@ -1,5 +1,5 @@
 # pn532.py
-# Minimal PN532 driver over I2C: just enough to read a card's UID.
+# Minimal PN532 driver over I2C: read a card's UID, and read or write NTAG pages.
 import time
 
 _ADDR = 0x24
@@ -11,6 +11,10 @@ _CMD_GET_FIRMWARE_VERSION = 0x02
 _CMD_SAM_CONFIGURATION = 0x14
 _CMD_RF_CONFIGURATION = 0x32
 _CMD_IN_LIST_PASSIVE_TARGET = 0x4A
+_CMD_IN_DATA_EXCHANGE = 0x40
+
+_NTAG_READ = 0x30  # Returns 4 pages (16 bytes)
+_NTAG_WRITE = 0xA2 # Writes 1 page (4 bytes)
 
 class PN532:
     def __init__(self, i2c, addr=_ADDR):
@@ -41,6 +45,23 @@ class PN532:
             return None
         uid_len = data[5]
         return "".join(f"{b:02X}" for b in data[6:6 + uid_len])
+
+    def read_pages(self, page):
+        """Reads 4 pages (16 bytes) of the NTAG card found by the last read_uid(), starting at page."""
+        data = self._exchange(bytes([_NTAG_READ, page]))
+        if len(data) < 16:
+            raise RuntimeError("Card sent a short read")
+        return data[:16]
+
+    def write_page(self, page, data):
+        """Writes one 4-byte page of the NTAG card found by the last read_uid()."""
+        self._exchange(bytes([_NTAG_WRITE, page]) + data)
+
+    def _exchange(self, data):
+        resp = self._call(_CMD_IN_DATA_EXCHANGE, b"\x01" + data) # Target 1
+        if not resp or resp[0] & 0x3F: # Status byte: the low 6 bits are an error code
+            raise RuntimeError("Card didn't answer. Hold it still on the reader.")
+        return resp[1:]
 
     def _call(self, cmd, params=b"", timeout_ms=1000):
         """Sends a command and returns the response data."""

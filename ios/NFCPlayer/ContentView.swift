@@ -1,84 +1,72 @@
 import SwiftUI
-import WebKit
 
+/// The home screen: search your library and TMDB for a title to put on a card.
 struct ContentView: View {
-    @ObservedObject private var link = PlayerLink.shared
+    @ObservedObject private var player = Player.shared
+    @AppStorage("tmdbKey") private var tmdbKey = ""
+    @AppStorage(Player.addressKey) private var playerAddress = ""
+    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    @State private var editingAddress = false
+    @State private var addressDraft = ""
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let url = link.pageURL {
-                    PlayerPage(url: url, version: link.pageVersion)
-                        .ignoresSafeArea(edges: .bottom)
-                } else {
-                    ContentUnavailableView {
-                        Label("Looking for your player", systemImage: "dot.radiowaves.left.and.right")
-                    } description: {
-                        Text("Keep the player plugged in and your phone nearby. It needs to be set up on your Wi-Fi first.")
+            SearchView()
+                .navigationTitle("NFC Player")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        StatusBadge(status: player.status)
+                            .labelStyle(.titleAndIcon)
+                            .font(.footnote)
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button("Player settings", systemImage: "gearshape") {
+                                openURL(Player.url.appendingPathComponent("setup"))
+                            }
+                            Button("Player address", systemImage: "network") {
+                                addressDraft = playerAddress
+                                editingAddress = true
+                            }
+                            if !tmdbKey.isEmpty {
+                                Button("Change TMDB key", systemImage: "key") { tmdbKey = "" }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
                     }
                 }
-            }
-            .navigationTitle("NFC Player")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    StatusBadge(status: link.status)
-                        .labelStyle(.titleAndIcon)
-                        .font(.footnote)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("Reload", systemImage: "arrow.clockwise") { link.reloadPage() }
-                        Button("Forget this player", systemImage: "xmark.circle", role: .destructive) { link.forgetPlayer() }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
+                .alert("Player address", isPresented: $editingAddress) {
+                    TextField(Player.defaultAddress, text: $addressDraft)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                    Button("Save") {
+                        playerAddress = addressDraft
+                        Task { await player.check() }
                     }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Leave blank to find the player automatically. Otherwise enter its IP address, shown in its log at startup.")
                 }
-            }
         }
+        .task { await player.check() }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { link.reloadPage() } // Show what the player is waiting for now
+            if phase == .active { Task { await player.check() } }
         }
     }
 }
 
 private struct StatusBadge: View {
-    let status: PlayerLink.Status
+    let status: Player.Status
 
     var body: some View {
         switch status {
-        case .connected: Label("Connected", systemImage: "circle.fill").foregroundStyle(.green)
-        case .outOfRange: Label("Out of range", systemImage: "circle.fill").foregroundStyle(.orange)
-        case .searching: Label("Searching", systemImage: "circle.dotted").foregroundStyle(.secondary)
-        case .bluetoothOff: Label("Bluetooth off", systemImage: "circle.slash").foregroundStyle(.red)
+        case .online: Label("Player online", systemImage: "circle.fill").foregroundStyle(.green)
+        case .offline: Label("Player not found", systemImage: "circle.fill").foregroundStyle(.orange)
+        case .checking: Label("Checking", systemImage: "circle.dotted").foregroundStyle(.secondary)
         }
-    }
-}
-
-/// The player's own web page (paste a link, change settings) in a web view.
-private struct PlayerPage: UIViewRepresentable {
-    let url: URL
-    let version: Int
-
-    final class Coordinator {
-        var loadedURL: URL?
-        var loadedVersion = -1
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.allowsBackForwardNavigationGestures = true
-        return webView
-    }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        let loaded = context.coordinator
-        guard loaded.loadedURL != url || loaded.loadedVersion != version else { return }
-        loaded.loadedURL = url
-        loaded.loadedVersion = version
-        webView.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData))
     }
 }
