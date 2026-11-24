@@ -2,11 +2,14 @@
 
 # NFCMP: NFC Movie Player
 
-Put a movie or show on an NFC card. Tap the card on the player and the Roku TV turns on and starts it: Netflix, Jellyfin, Disney+ and more. Titles are picked in the **NFCMP** iPhone app and stored on the card itself.
+Put a movie or show on an NFC card. Tap the card on the player and your Roku TV turns on and starts it: Netflix, Jellyfin, Disney+ and more. Titles are picked in the **NFCMP** iPhone app and stored on the card itself.
 
 - **Tap to play.** Each card holds its own title, so it works on any player and survives a wiped board.
 - **Search everything.** The app searches your own Jellyfin library and every streaming service (through TMDB), and shows where each title streams in the US.
-- **No typing on the board.** The first time it's powered on, the player opens its own Wi-Fi network with a setup page for your Wi-Fi, TV and media server. It finds the Roku and the Jellyfin server by itself.
+- **No typing on the board.** The first time it's powered on, the player opens its own Wi-Fi network with a setup page that asks only for your Wi-Fi. Everything else is set up in the app, and the player finds the TV and the Jellyfin server by itself.
+
+> [!IMPORTANT]
+> **Roku only for now.** Cards play on Roku TVs today. Google TV support is written (pairing, power and app links all run on the player) but hasn't been tested on a real Google TV yet, so treat it as a work in progress. I'm working on it. Samsung is planned after that.
 
 > [!NOTE]
 > Netflix and Jellyfin are proven on a real TV. Disney+, Hulu, Prime Video, Apple TV and Max cards are written in the same format, but whether each app opens the right title hasn't been tested yet.
@@ -32,9 +35,9 @@ Put a movie or show on an NFC card. Tap the card on the player and the Roku TV t
 
 <p align="center"><img src="docs/images/overview.svg" alt="The iPhone app talks to the player over Wi-Fi; the player writes and reads cards and sends play commands to the Roku TV; the Jellyfin server supplies library search" width="100%"></p>
 
-1. In the **NFCMP** app, search for a title and tap **Write to card**. The app sends the title to the player over Wi-Fi.
-2. Tap a card on the player. The player writes the title onto the card.
-3. From then on, tapping that card turns on the TV and opens the title using Roku's deep links.
+1. In the **NFCMP** app, search for a title and tap **Write to card**.
+2. Hold a card to the top of your iPhone. The app writes the title onto the card. (Or tap **Write on player**, and the next card tapped on the player gets it.)
+3. From then on, tapping that card turns on the TV and opens the title using the TV's deep links. Cards don't name a TV, so the same cards will also play on a Google TV once that support is finished.
 
 The player is an ESP32-S3 running MicroPython, with a PN532 NFC reader connected over I2C.
 
@@ -56,10 +59,10 @@ The player is an ESP32-S3 running MicroPython, with a PN532 NFC reader connected
 
 | Thing | Why |
 | --- | --- |
-| A Roku TV or Roku player | Plays the titles. Netflix, Jellyfin and the other apps must already be installed and signed in on it. |
+| A Roku TV | Plays the titles. Google TV is a work in progress (see the note at the top). Netflix, Jellyfin and the other apps must already be installed and signed in on it. |
 | 2.4 GHz Wi-Fi | The ESP32 can't join 5 GHz networks. If your router shows a separate "5G" network, use the other one. |
 | A Mac with Python 3 | To flash and copy code to the board. |
-| An iPhone and Xcode | To install the NFCMP app. A free Apple ID works (see step 11). |
+| An iPhone and Xcode | To install the NFCMP app. Writing cards with the iPhone needs a paid Apple Developer account; a free Apple ID works with limits (see step 11). |
 | A Jellyfin server (optional) | For library search and the blank-card shortcut. |
 | A TMDB API key (free) | For searching streaming services in the app. Get one at [themoviedb.org](https://www.themoviedb.org/settings/api). |
 
@@ -177,7 +180,7 @@ Everything below runs from this `NFCmp` folder.
 ### Step 7: Copy the code to the board
 
 ```sh
-mpremote cp config.py pn532.py card.py web.py onboarding.py servers.py main.py :
+mpremote cp config.py pn532.py card.py web.py onboarding.py servers.py api.py tv.py roku.py googletv.py tlskey.py main.py :
 ```
 
 The `:` at the end means "the board". `main.py` runs automatically every time the board starts.
@@ -187,13 +190,18 @@ The `:` at the end means "the board". `main.py` runs automatically every time th
 | `main.py` | Reads taps, plays cards, writes titles sent from the app, runs the player's web page |
 | `card.py` | The title record stored on each card |
 | `pn532.py` | Talks to the NFC reader; reads and writes card memory |
-| `onboarding.py` | The setup network and setup page; finds the Roku |
+| `onboarding.py` | The setup network and its Wi-Fi page |
+| `api.py` | The setup API the app uses: choose the TV, pair, media server |
+| `tv.py` | Picks the TV code for the TV chosen in setup and opens each card's title in the right app |
+| `roku.py` | Roku: finds it, turns it on, deep links |
+| `googletv.py` | Google TV: finds it, pairs with it, turns it on, opens app links |
+| `tlskey.py` | Makes the certificate the player uses to pair with a Google TV |
 | `servers.py` | Finds Jellyfin (or Plex), signs in, searches the library |
 | `web.py` | Small web-server helpers |
 | `config.py` | Fixed settings: pins, timeouts, streaming app IDs |
 
 > [!NOTE]
-> Your Wi-Fi password and server sign-in are **not** in these files. You enter them on the setup page in step 9, and the board keeps them in its own `settings.json`.
+> Your Wi-Fi password and server sign-in are **not** in these files. You enter the Wi-Fi on the setup page in step 9 and the rest in the app in step 13. The board keeps them in its own `settings.json`.
 
 ### Step 8: Restart and watch the log
 
@@ -220,48 +228,27 @@ Press **Ctrl-]** to leave the log. The board keeps running.
 
 1. On your iPhone, open **Settings → Wi-Fi** and join **NFC Movie Player**. It's an open network with no password.
 2. A setup sheet pops up. If it doesn't, open Safari and go to `http://192.168.4.1`.
-3. Fill in the form:
+3. Pick your home Wi-Fi (nearby networks are suggested as you tap the box), enter the password and tap **Connect**.
 
-<table>
-<tr>
-<td width="50%"><img src="docs/images/setup-wifi.png" alt="Setup page: tapping Wi-Fi name suggests nearby networks"></td>
-<td width="50%"><img src="docs/images/setup-server.png" alt="Setup page: Jellyfin chosen as the media server, with username and password"></td>
-</tr>
-<tr>
-<td><b>Wi-Fi.</b> Tap the name box: nearby networks are suggested above the keyboard. Enter the password.</td>
-<td><b>Roku and media server.</b> Leave the Roku and server addresses blank and they're found automatically. Choose <b>Jellyfin</b> and enter the account the TV's Jellyfin app uses.</td>
-</tr>
-</table>
+<p align="center"><img src="docs/images/setup-wifi.png" alt="The setup page asks only for the home Wi-Fi: name, password, Connect" width="295"></p>
 
-| Field | What to enter |
-| --- | --- |
-| Wi-Fi name / password | Your home **2.4 GHz** network |
-| Roku IP address | Leave blank (found automatically) |
-| Personal media server | None, Jellyfin or Plex |
-| Server address | Leave blank (found automatically) |
-| Username / password | Jellyfin: the TV app's account. Plex: your plex.tv account |
+That's the only thing the setup page asks. The TV, Google TV pairing and the media server are set up in the app (step 13).
 
-### Step 10: Save and connect
+> [!NOTE]
+> The player needs a **2.4 GHz** network. If the password is wrong, the **NFC Movie Player** network comes back after about 20 seconds with your entries filled in.
 
-Tap **Save and connect**. The player restarts and joins your Wi-Fi. Switch your phone back to your home network.
+### Step 10: Watch it connect
 
-In the log (`mpremote repl`) you'll see it find everything:
+The player restarts and joins your Wi-Fi. Switch your phone back to your home network. In the log (`mpremote repl`):
 
 ```text
 Wi-Fi connected: 192.168.1.50
-Looking for the Roku...
-Found the Roku at 192.168.1.237.
-Looking for the Jellyfin server...
-Found Jellyfin at http://192.168.1.138:8096.
-Signing in to Jellyfin...
-Signed in to Jellyfin.
+No TV chosen yet. Open the NFCMP app to finish setting up.
 NFC reader ready: PN532 v1.6
 0 card(s) linked. Waiting for a tap...
 ```
 
-- **After sign-in:** the player keeps a login key and deletes your password.
-- **Wrong Wi-Fi password:** after 20 seconds the **NFC Movie Player** network comes back, with your entries filled in.
-- **Changing settings later:** open `http://nfc-player.local/setup` and tap **Restart in setup mode**, or use **Player settings** in the app.
+- **Moving it to another Wi-Fi later:** in the app, **Player settings → Move to another Wi-Fi**, or open `http://nfc-player.local/setup`.
 
 ---
 
@@ -270,7 +257,7 @@ NFC reader ready: PN532 v1.6
 ### Step 11: Put NFCMP on your iPhone
 
 1. Open `ios/NFCPlayer.xcodeproj` in Xcode.
-2. Click **NFCPlayer** → **Signing & Capabilities** → **Team**, and choose your Apple ID. Add it under **Add Account** if it isn't listed.
+2. Click **NFCPlayer** → **Signing & Capabilities** → **Team**, and choose your paid Apple Developer team. Add your Apple ID under **Add Account** if it isn't listed. Then change the bundle identifiers in `ios/project.yml` (`com.orangeflow.nfcplayer` and `com.orangeflow.nfcplayer.share`) to your own and run `xcodegen`, since those IDs belong to another team.
 3. Plug in your iPhone and pick it at the top of the Xcode window.
 4. Press **▶ Run**.
 5. On the iPhone, the first time:
@@ -278,7 +265,7 @@ NFC reader ready: PN532 v1.6
    2. If iOS asks, trust your developer profile in **Settings → General → VPN & Device Management**.
 
 > [!IMPORTANT]
-> With a free Apple ID, the app stops opening after **7 days**. Plug in and press Run again to reinstall it. Your settings are kept. The paid Apple Developer Program ($99/year) makes it last a year.
+> The app reads and writes cards with the iPhone's NFC, which needs the paid Apple Developer Program ($99/year). A free Apple ID can't sign it. To build with one, remove the `entitlements` block from `ios/project.yml` and run `xcodegen`: **Write on player** still works, but the phone can't touch cards and the app stops opening after 7 days.
 
 > [!NOTE]
 > The Xcode project is generated from `ios/project.yml` with [XcodeGen](https://github.com/yonaskolb/XcodeGen). If you add files or change settings, run `cd ios && xcodegen`.
@@ -294,11 +281,35 @@ The badge in the top-left corner shows whether the app can reach the player:
 | ● **Online** (green) | The player answered at `nfc-player.local` |
 | ● **Offline** (orange) | Not found. Check the phone and player are on the same Wi-Fi, or set the address under **⋯ → Player address**. |
 
+### Step 13: Choose your TV
+
+The first time the app finds a player with no TV, it opens **Player settings** by itself. You can also get there from **⋯ → Player settings** or by tapping the **Online** badge.
+
+<table>
+<tr>
+<td width="25%"><img src="docs/images/app-setup-start.png" alt="Player settings with Choose your TV marked as needing attention"></td>
+<td width="25%"><img src="docs/images/app-setup-tvs.png" alt="Choose your TV: the player found a Roku on the Wi-Fi"></td>
+<td width="25%"><img src="docs/images/app-pair-code.png" alt="Google TV pairing: enter the code shown on the TV"></td>
+<td width="25%"><img src="docs/images/app-setup-paired.png" alt="Player settings: Google TV chosen and paired"></td>
+</tr>
+<tr>
+<td><b>1.</b> Tap <b>Choose your TV</b>.</td>
+<td><b>2.</b> The player lists the Rokus and Google TVs on your Wi-Fi by name. Tap yours. Not listed? Enter its IP address under <b>Not listed?</b></td>
+<td><b>3.</b> <b>Google TV only (work in progress, untested):</b> turn the TV on, tap <b>Show code on TV</b> and type the code the TV shows.</td>
+<td><b>4.</b> A green check means cards will play. <b>Turn on the TV</b> tests it.</td>
+</tr>
+</table>
+
+- **Google TV is a work in progress.** The app lists Google TVs and has pairing built in, but none of it has been tested on a real Google TV yet, only against a simulated one. Use a Roku for now.
+- **Google TV, "Getting ready":** the first time, the player spends a minute or two making its own security certificate before it can pair. The app waits and carries on by itself.
+- **Media server (optional):** **Player settings → Media server**. Choose Jellyfin or Plex and sign in with the account the TV's app uses. The address is found automatically.
+- **Changing TVs later:** cards don't name a TV, so the same cards play on the new one.
+
 ---
 
 ## Make your first card
 
-### Step 13: Find the title
+### Step 14: Find the title
 
 <table>
 <tr>
@@ -313,7 +324,7 @@ The badge in the top-left corner shows whether the app can reach the player:
 </tr>
 </table>
 
-### Step 14: Write it to a card
+### Step 15: Write it to a card
 
 <table>
 <tr>
@@ -321,16 +332,17 @@ The badge in the top-left corner shows whether the app can reach the player:
 <td width="50%"><img src="docs/images/app-write-done.png" alt="Card ready"></td>
 </tr>
 <tr>
-<td><b>1.</b> Tap <b>Write to card</b>, then tap an NTAG215 card on the player and <b>hold it still for a second</b>.</td>
+<td><b>1.</b> Tap <b>Write to card</b> and hold an NTAG215 card to the top of your iPhone until it says <b>Card ready</b>. To use the player instead, tap <b>Write on player</b>, then tap the card on the player and <b>hold it still for a second</b> (shown here).</td>
 <td><b>2.</b> <b>Card ready.</b> The title is now stored on the card.</td>
 </tr>
 </table>
 
-- **The write fails** (the card moved): the app says so, and you just tap again.
-- **No card within 2 minutes:** the player stops waiting. Tap **Try again** in the app.
+- **The write fails** (the card moved): the app says so, and you just try again.
+- **No card within 2 minutes (Write on player):** the player stops waiting. Tap **Try again** in the app.
+- **Check a card:** tap the card icon at the top of the app's home screen and hold a card to your iPhone to see what's on it.
 - **Safe to pull away:** a card pulled away mid-write reads as blank, never half old and half new.
 
-### Step 15: Play it
+### Step 16: Play it
 
 Tap the card on the player. The TV turns on, waits 3 seconds, and opens the title.
 
@@ -349,7 +361,7 @@ When the code changes, there's no need to flash MicroPython or redo setup:
 ```sh
 cd NFCmp
 git pull
-mpremote cp config.py pn532.py card.py web.py onboarding.py servers.py main.py : && mpremote reset
+mpremote cp config.py pn532.py card.py web.py onboarding.py servers.py api.py tv.py roku.py googletv.py tlskey.py main.py : && mpremote reset
 ```
 
 Your settings (`settings.json`) and cards are kept. Cards carry their own titles, so even deleting the board's card list doesn't unlink them.
@@ -375,13 +387,13 @@ v1;svc=jellyfin;type=movie;id=183be3c815b9c0e6d1b9882e99439d72;t=Frozen
 v1;svc=disney;type=movie;id=1JffnkWmY6mD;t=Frozen
 ```
 
-| `svc` | Roku app | Status |
-| --- | --- | --- |
-| `netflix` | Netflix (12) | ✅ Plays on the TV |
-| `jellyfin` | Jellyfin (592369) | ✅ Plays on the TV (IDs only work with your server) |
-| `disney`, `hulu`, `prime`, `appletv`, `max` | Disney+, Hulu, Prime Video, Apple TV, HBO Max | ⚠️ App IDs confirmed, deep links untested |
-| `youtube` | YouTube (837) | ⚠️ Untested |
-| `plex` | Plex (13535) | ⚠️ Untested |
+| `svc` | Roku app | On Roku | On Google TV (in progress) |
+| --- | --- | --- | --- |
+| `netflix` | Netflix (12) | ✅ Plays | ⚠️ Untested (`netflix.com/title/<id>` link) |
+| `jellyfin` | Jellyfin (592369) | ✅ Plays (IDs only work with your server) | ⚠️ Untested (started through the Jellyfin server; needs it set up in settings) |
+| `disney`, `hulu`, `prime`, `appletv`, `max` | Disney+, Hulu, Prime Video, Apple TV, HBO Max | ⚠️ App IDs confirmed, deep links untested | ⚠️ Untested |
+| `youtube` | YouTube (837) | ⚠️ Untested | ⚠️ Untested |
+| `plex` | Plex (13535) | ⚠️ Untested | ❌ Not supported yet |
 
 ---
 
@@ -394,11 +406,12 @@ v1;svc=disney;type=movie;id=1JffnkWmY6mD;t=Frozen
 | **NFC Movie Player** keeps coming back | The player can't join your Wi-Fi: wrong password, or a 5 GHz network. |
 | App says **Offline** | Phone and player must be on the same Wi-Fi. Try **⋯ → Player address** with the IP from the log. |
 | "Couldn't reach the player to search your library" | Same as Offline. TMDB results still work. |
-| Write to card keeps failing | Hold the card flat and still on the reader for a full second. Use NTAG215, not the S50 card. |
+| Write to card keeps failing | Hold the card flat and still against the top of the iPhone, or on the reader for a full second. Use NTAG215, not the S50 card. |
 | A card does nothing | It may be blank and no media server is set up; write a title to it from the app. |
+| Cards do nothing on a Google TV | Google TV support is still in progress and untested. If you're trying it: pair in **Player settings → Pairing**, and pair again after a factory reset of the TV. |
 | Netflix opens on its home screen | It showed "Who's watching?" first. Pick a profile and tap the card again. |
 | A mature Netflix title won't play | Netflix uses the last profile; a Kids profile blocks it. |
-| The app won't open | The free 7-day signing ran out. Reinstall from Xcode (step 11). |
+| The app won't open | Its signing ran out. Reinstall from Xcode (step 11). |
 | No **Write to card** button | That service doesn't stream it in the US, or Wikidata has no ID for it. |
 
 ---
@@ -410,7 +423,12 @@ NFCmp/
 ├── main.py            Tap handling, playback, Jellyfin learning, web page
 ├── card.py            Card record format (NDEF text record)
 ├── pn532.py           PN532 driver: card UID, NTAG page read/write
-├── onboarding.py      Setup network, captive setup page, Roku discovery
+├── onboarding.py      Setup network, captive Wi-Fi page
+├── api.py             Setup API for the app (TV, pairing, media server)
+├── tv.py              Plays a card on the TV picked in setup
+├── roku.py            Roku: discovery, power, deep links (ECP)
+├── googletv.py        Google TV: discovery, pairing, power, app links
+├── tlskey.py          RSA key and certificate for Google TV pairing
 ├── servers.py         Jellyfin/Plex discovery, sign-in, library search
 ├── web.py             Tiny HTTP helpers
 ├── config.py          Pins, timeouts, streaming app IDs
@@ -431,3 +449,7 @@ NFCmp/
 - Streaming IDs from [Wikidata](https://www.wikidata.org).
 - ESP32-S3 pin positions from [CircuitState's pinout](https://www.circuitstate.com/pinouts/waveshare-esp32-s3-dev-kit-nxr8-wi-fi-development-board-pinout-diagram-arduino-reference/).
 - Runs on [MicroPython](https://micropython.org).
+
+## License
+
+[MIT](LICENSE)
