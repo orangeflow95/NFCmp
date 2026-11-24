@@ -7,17 +7,32 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		064FB9BA81314481DBEF9537 /* NFCPlayerShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8C15FACD3C683E6DBC542BD9 /* NFCPlayerShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		29BA221EB03127A340BCFE24 /* ShareLinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D34805655A9B05C87AA0EBF /* ShareLinkView.swift */; };
 		45EB4BC7F4E3A8B9C1545BD2 /* WriteCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90602B8C1680DC89DC04CE9C /* WriteCardView.swift */; };
+		5C422E078D8C22ACDFC28F5E /* ReadCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DC75BD896E0282D6F60416A /* ReadCardView.swift */; };
 		6AE9F13EAE1A450A5C089EDF /* ScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ECFEF061477675D8E26656E /* ScreenshotTests.swift */; };
 		715ADEB033DBDFD2271F8E52 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */; };
 		7D9013BE7AC23A640FCAB65F /* NFCPlayerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */; };
+		859A2EDB3068048D6892EF3A /* PlayerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B6042930DE6BC3229B4C9C /* PlayerSetupView.swift */; };
+		8A972E6F5E72AFF8AFF284AA /* PhoneCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74DAD3F8F2B72C7A5622E0D4 /* PhoneCard.swift */; };
 		B0A6E709F646E7A622ED163F /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2FAA34C68B893635E4EE3FE /* Player.swift */; };
 		B393F7A654D1486952ACDAC8 /* CardLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46DE4396495B65A1C4F15F85 /* CardLookup.swift */; };
+		C03959C2617A774AD549561F /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DF452B4C6694A83A83F6393 /* ShareViewController.swift */; };
+		C7908C21A8669DC1EE2852A5 /* CardRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F482FC67492837D4FC80654 /* CardRecord.swift */; };
 		C7F411F7DA0EC62362C83B53 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65B5812E17907861AC05F3BD /* SearchView.swift */; };
+		E1D3D53095A1773CE1DEDB66 /* ShareLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E822AC540493D8FD9E5F8C /* ShareLink.swift */; };
 		EEA0248EFA7F1655C1ABBE09 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A2E30DA49849E40BFD69216 /* ContentView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1E85C5D75A7AE3E64A71951C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 4734B034535CFF7366C514DD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 57A8C49F349C3B3A95102F9D;
+			remoteInfo = NFCPlayerShare;
+		};
 		F50DFA26B22CDB8B05D1AAF8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 4734B034535CFF7366C514DD /* Project object */;
@@ -27,17 +42,41 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		A873B9BB76C20B2EAC1E1928 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				064FB9BA81314481DBEF9537 /* NFCPlayerShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		1ECFEF061477675D8E26656E /* ScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTests.swift; sourceTree = "<group>"; };
 		46DE4396495B65A1C4F15F85 /* CardLookup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardLookup.swift; sourceTree = "<group>"; };
 		49A8DCE80E77147C99B31DD0 /* NFCPlayerUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NFCPlayerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4F482FC67492837D4FC80654 /* CardRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardRecord.swift; sourceTree = "<group>"; };
 		5506BBA80F5084EB13B9F622 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCPlayerApp.swift; sourceTree = "<group>"; };
 		5A2E30DA49849E40BFD69216 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		5D34805655A9B05C87AA0EBF /* ShareLinkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareLinkView.swift; sourceTree = "<group>"; };
 		65B5812E17907861AC05F3BD /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		68E8E1E8C5BF7A3135C27E8D /* NFCPlayer.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NFCPlayer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6DC75BD896E0282D6F60416A /* ReadCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadCardView.swift; sourceTree = "<group>"; };
+		70E071062BD4FE649B1BA779 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		74DAD3F8F2B72C7A5622E0D4 /* PhoneCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneCard.swift; sourceTree = "<group>"; };
+		8C15FACD3C683E6DBC542BD9 /* NFCPlayerShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = NFCPlayerShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8DF452B4C6694A83A83F6393 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		90602B8C1680DC89DC04CE9C /* WriteCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteCardView.swift; sourceTree = "<group>"; };
 		A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B5B6042930DE6BC3229B4C9C /* PlayerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSetupView.swift; sourceTree = "<group>"; };
+		D4E822AC540493D8FD9E5F8C /* ShareLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareLink.swift; sourceTree = "<group>"; };
+		DE2C513DF13C2E4997C1B086 /* NFCPlayer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NFCPlayer.entitlements; sourceTree = "<group>"; };
 		E2FAA34C68B893635E4EE3FE /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -47,11 +86,18 @@
 			children = (
 				A5D38C765BFFC37DF238A4E7 /* Assets.xcassets */,
 				46DE4396495B65A1C4F15F85 /* CardLookup.swift */,
+				4F482FC67492837D4FC80654 /* CardRecord.swift */,
 				5A2E30DA49849E40BFD69216 /* ContentView.swift */,
 				5506BBA80F5084EB13B9F622 /* Info.plist */,
+				DE2C513DF13C2E4997C1B086 /* NFCPlayer.entitlements */,
 				5827CE8ED46984960E07E8D5 /* NFCPlayerApp.swift */,
+				74DAD3F8F2B72C7A5622E0D4 /* PhoneCard.swift */,
 				E2FAA34C68B893635E4EE3FE /* Player.swift */,
+				B5B6042930DE6BC3229B4C9C /* PlayerSetupView.swift */,
+				6DC75BD896E0282D6F60416A /* ReadCardView.swift */,
 				65B5812E17907861AC05F3BD /* SearchView.swift */,
+				D4E822AC540493D8FD9E5F8C /* ShareLink.swift */,
+				5D34805655A9B05C87AA0EBF /* ShareLinkView.swift */,
 				90602B8C1680DC89DC04CE9C /* WriteCardView.swift */,
 			);
 			path = NFCPlayer;
@@ -61,6 +107,7 @@
 			isa = PBXGroup;
 			children = (
 				299ED77B663A9D1F4E5B1869 /* NFCPlayer */,
+				BC49DBB87B457C2C8CA9311C /* NFCPlayerShare */,
 				E268CE4EBC8EF27E4DD0F9F9 /* NFCPlayerUITests */,
 				B58D116B078DA99C66F32D90 /* Products */,
 			);
@@ -70,9 +117,19 @@
 			isa = PBXGroup;
 			children = (
 				68E8E1E8C5BF7A3135C27E8D /* NFCPlayer.app */,
+				8C15FACD3C683E6DBC542BD9 /* NFCPlayerShare.appex */,
 				49A8DCE80E77147C99B31DD0 /* NFCPlayerUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BC49DBB87B457C2C8CA9311C /* NFCPlayerShare */ = {
+			isa = PBXGroup;
+			children = (
+				70E071062BD4FE649B1BA779 /* Info.plist */,
+				8DF452B4C6694A83A83F6393 /* ShareViewController.swift */,
+			);
+			path = NFCPlayerShare;
 			sourceTree = "<group>";
 		};
 		E268CE4EBC8EF27E4DD0F9F9 /* NFCPlayerUITests */ = {
@@ -104,16 +161,35 @@
 			productReference = 49A8DCE80E77147C99B31DD0 /* NFCPlayerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		57A8C49F349C3B3A95102F9D /* NFCPlayerShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 05363E201E37F99C13A41B92 /* Build configuration list for PBXNativeTarget "NFCPlayerShare" */;
+			buildPhases = (
+				24A147A22FECAD498BA4F957 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NFCPlayerShare;
+			packageProductDependencies = (
+			);
+			productName = NFCPlayerShare;
+			productReference = 8C15FACD3C683E6DBC542BD9 /* NFCPlayerShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		BBD7FE7DD262D4784CB5DDF7 /* NFCPlayer */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DE8EEF3533C878B3CF4377C5 /* Build configuration list for PBXNativeTarget "NFCPlayer" */;
 			buildPhases = (
 				0D2736D580846852B3C30B28 /* Sources */,
 				57FEE9AE50465268713A804E /* Resources */,
+				A873B9BB76C20B2EAC1E1928 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				7B2AFF0EE265A15A6740EA39 /* PBXTargetDependency */,
 			);
 			name = NFCPlayer;
 			packageProductDependencies = (
@@ -136,6 +212,10 @@
 						ProvisioningStyle = Automatic;
 						TestTargetID = BBD7FE7DD262D4784CB5DDF7;
 					};
+					57A8C49F349C3B3A95102F9D = {
+						DevelopmentTeam = Q753P6JLVL;
+						ProvisioningStyle = Automatic;
+					};
 					BBD7FE7DD262D4784CB5DDF7 = {
 						DevelopmentTeam = Q753P6JLVL;
 						ProvisioningStyle = Automatic;
@@ -157,6 +237,7 @@
 			projectRoot = "";
 			targets = (
 				BBD7FE7DD262D4784CB5DDF7 /* NFCPlayer */,
+				57A8C49F349C3B3A95102F9D /* NFCPlayerShare */,
 				0B07A20401938A7004F264BD /* NFCPlayerUITests */,
 			);
 		};
@@ -179,10 +260,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				B393F7A654D1486952ACDAC8 /* CardLookup.swift in Sources */,
+				C7908C21A8669DC1EE2852A5 /* CardRecord.swift in Sources */,
 				EEA0248EFA7F1655C1ABBE09 /* ContentView.swift in Sources */,
 				7D9013BE7AC23A640FCAB65F /* NFCPlayerApp.swift in Sources */,
+				8A972E6F5E72AFF8AFF284AA /* PhoneCard.swift in Sources */,
 				B0A6E709F646E7A622ED163F /* Player.swift in Sources */,
+				859A2EDB3068048D6892EF3A /* PlayerSetupView.swift in Sources */,
+				5C422E078D8C22ACDFC28F5E /* ReadCardView.swift in Sources */,
 				C7F411F7DA0EC62362C83B53 /* SearchView.swift in Sources */,
+				E1D3D53095A1773CE1DEDB66 /* ShareLink.swift in Sources */,
+				29BA221EB03127A340BCFE24 /* ShareLinkView.swift in Sources */,
 				45EB4BC7F4E3A8B9C1545BD2 /* WriteCardView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -195,9 +282,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		24A147A22FECAD498BA4F957 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C03959C2617A774AD549561F /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		7B2AFF0EE265A15A6740EA39 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 57A8C49F349C3B3A95102F9D /* NFCPlayerShare */;
+			targetProxy = 1E85C5D75A7AE3E64A71951C /* PBXContainerItemProxy */;
+		};
 		8C511AE1F56D0C7E9E32E074 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = BBD7FE7DD262D4784CB5DDF7 /* NFCPlayer */;
@@ -282,6 +382,27 @@
 			};
 			name = Release;
 		};
+		6A8D4EB46674A0A95A26DFED /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q753P6JLVL;
+				INFOPLIST_FILE = NFCPlayerShare/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.orangeflow.nfcplayer.share;
+				PRODUCT_NAME = NFCMP;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 		7348178F49CA362302FB8654 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -349,6 +470,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NFCPlayer/NFCPlayer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -366,10 +488,32 @@
 			};
 			name = Release;
 		};
+		9A63E893718219D9E77BAB79 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Q753P6JLVL;
+				INFOPLIST_FILE = NFCPlayerShare/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.orangeflow.nfcplayer.share;
+				PRODUCT_NAME = NFCMP;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		B3BFC8B9AE24E5EA7BE8C460 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NFCPlayer/NFCPlayer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -410,6 +554,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		05363E201E37F99C13A41B92 /* Build configuration list for PBXNativeTarget "NFCPlayerShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A63E893718219D9E77BAB79 /* Debug */,
+				6A8D4EB46674A0A95A26DFED /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		09A5018BB84858A0EBA1CE82 /* Build configuration list for PBXNativeTarget "NFCPlayerUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

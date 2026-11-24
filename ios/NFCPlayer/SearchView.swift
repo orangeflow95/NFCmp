@@ -203,7 +203,9 @@ private struct CardOptionsView: View {
                 } header: {
                     Text("Card records")
                 } footer: {
-                    Text("Write to card sends the title to the player. Then tap a card on the player to save it there.")
+                    Text(PhoneCard.isAvailable
+                         ? "Write to card saves the title with your iPhone. Write on player sends it to the player, for the next card tapped there."
+                         : "Write to card sends the title to the player. Then tap a card on the player to save it there.")
                 }
                 if let problem {
                     Text(problem).font(.footnote).foregroundStyle(.secondary)
@@ -250,11 +252,13 @@ private struct CardOptionsView: View {
     }
 }
 
-private struct CandidateRow: View {
+struct CandidateRow: View {
     let candidate: CardCandidate
     let records: [String]
     let title: String
-    @State private var writing: String? // The record being written
+    @State private var writing: String? // The record being written on the player
+    @State private var written: String? // The record the iPhone last wrote
+    @State private var problem: String? // Why the iPhone's last write failed
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -284,16 +288,48 @@ private struct CandidateRow: View {
                             Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = record }
                         }
                     if candidate.available { // Only services that stream it in the US
-                        Button("Write to card", systemImage: "wave.3.right") { writing = record }
+                        HStack {
+                            Button("Write to card", systemImage: "wave.3.right") {
+                                if PhoneCard.isAvailable {
+                                    Task { await writeWithPhone(record) }
+                                } else {
+                                    writing = record
+                                }
+                            }
                             .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
+                            if PhoneCard.isAvailable {
+                                Button("Write on player") { writing = record }
+                                    .buttonStyle(.bordered)
+                            }
+                        }
+                        .controlSize(.small)
+                        if written == record {
+                            Label("Card ready", systemImage: "checkmark.circle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(.green)
+                        }
                     }
                 }
+            }
+            if let problem {
+                Text(problem).font(.footnote).foregroundStyle(.red)
             }
         }
         .padding(.vertical, 2)
         .sheet(item: $writing) { record in
             WriteCardView(record: record, title: title)
+        }
+    }
+
+    private func writeWithPhone(_ record: String) async {
+        written = nil
+        problem = nil
+        do {
+            try await PhoneCard.write(record, title: title)
+            written = record
+        } catch is CancellationError {
+        } catch {
+            problem = error.localizedDescription
         }
     }
 }
