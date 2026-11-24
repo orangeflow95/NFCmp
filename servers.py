@@ -1,6 +1,7 @@
 # servers.py
 # Personal media servers (Jellyfin or Plex): finding them on the network,
-# signing in, and reading what the Roku is playing for learn mode.
+# signing in, reading what the TV is playing for learn mode, and starting
+# Jellyfin playback on Google TV.
 # The Plex parts follow Plex's public APIs but haven't been tested on a real server.
 import binascii
 import json
@@ -8,6 +9,7 @@ import socket
 import machine
 import config
 import onboarding
+import tv
 import web
 
 try:
@@ -15,15 +17,25 @@ try:
 except ImportError:
     import urequests as requests
 
-ROKU_APPS = {"jellyfin": config.JELLYFIN_APP_ID, "plex": config.PLEX_APP_ID}
 DEVICE_ID = binascii.hexlify(machine.unique_id()).decode()
 PRODUCT = "NFC Movie Player"
 
-def roku_app(settings):
-    """The Roku app ID of the signed-in media server, or None."""
-    if settings.get("server_url") and settings.get("server_token"):
-        return ROKU_APPS.get(settings.get("media_server"))
-    return None
+def signed_in(settings):
+    """True if a media server is set up and signed in."""
+    return bool(settings.get("media_server") in onboarding.SERVERS and settings.get("server_url") and settings.get("server_token"))
+
+def _jellyfin(settings, path, method="GET"):
+    r = requests.request(
+        method, f"{settings['server_url']}{path}",
+        headers={"Authorization": f'MediaBrowser Token="{settings["server_token"]}"', "Content-Length": "0"},
+        timeout=5,
+    )
+    try:
+        if r.status_code >= 400:
+            raise ValueError(f"Jellyfin answered {r.status_code}")
+        return r.json() if r.status_code == 200 and method == "GET" else None
+    finally:
+        r.close()
 
 def broadcast_address(ip, mask):
     return ".".join(str(int(a) | (255 ^ int(m))) for a, m in zip(ip.split("."), mask.split(".")))
@@ -140,18 +152,10 @@ def search_library(settings, text):
     the app can match it to TMDB results. Returns None if the server isn't
     signed in or isn't supported yet (Plex).
     """
-    if settings.get("media_server") != "jellyfin" or not roku_app(settings):
+    if settings.get("media_server") != "jellyfin" or not signed_in(settings):
         return None
     url = settings["server_url"]
-    r = requests.get(
-        f"{url}/Items?searchTerm={web.quote(text)}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=ProviderIds&Limit=20",
-        headers={"Authorization": f'MediaBrowser Token="{settings["server_token"]}"'},
-        timeout=5,
-    )
-    try:
-        items = r.json()["Items"]
-    finally:
-        r.close()
+    items = _jellyfin(settings, f"/Items?searchTerm={web.quote(text)}&IncludeItemTypes=Movie,Series&Recursive=true&Fields=ProviderIds&Limit=20")["Items"]
     return [{
         "id": item["Id"],
         "title": item.get("Name", "Untitled"),
@@ -161,24 +165,29 @@ def search_library(settings, text):
         "poster": f"{url}/Items/{item['Id']}/Images/Primary?maxHeight=300",
     } for item in items]
 
+def _on_tv(session, settings):
+    """True if a Jellyfin session is the TV's Jellyfin app."""
+    return session.get("RemoteEndPoint") == settings.get("tv_ip") or session.get("Client") == config.JELLYFIN_CLIENT.get(tv.kind(settings))
+
 def now_playing(settings):
-    """Returns a card for what the Roku is playing from the media server, or None."""
+    """Returns a card for what the TV is playing from the media server, or None."""
     if settings.get("media_server") == "plex":
         return _plex_now_playing(settings)
-    r = requests.get(
-        f"{settings['server_url']}/Sessions?activeWithinSeconds=600",
-        headers={"Authorization": f'MediaBrowser Token="{settings["server_token"]}"'},
-        timeout=5,
-    )
-    try:
-        sessions = r.json()
-    finally:
-        r.close()
-    for session in sessions:
+    for session in _jellyfin(settings, "/Sessions?activeWithinSeconds=600"):
         item = session.get("NowPlayingItem")
-        if session.get("Client") == config.JELLYFIN_CLIENT and item:
+        if item and _on_tv(session, settings):
             return {"id": item["Id"], "title": item.get("Name", "Unknown Movie"), "type": item.get("Type")}
     return None
+
+def remote_session(settings):
+    """The ID of the TV's Jellyfin session if it takes remote control (Google TV), or None."""
+    for session in _jellyfin(settings, "/Sessions?activeWithinSeconds=60"):
+        if session.get("SupportsRemoteControl") and _on_tv(session, settings):
+            return session["Id"]
+    return None
+
+def play_on_session(settings, session_id, item_id):
+    _jellyfin(settings, f"/Sessions/{session_id}/Playing?playCommand=PlayNow&itemIds={item_id}", "POST")
 
 def _plex_now_playing(settings):
     r = requests.get(
@@ -191,7 +200,7 @@ def _plex_now_playing(settings):
     finally:
         r.close()
     for item in sessions:
-        if config.PLEX_PRODUCT in item.get("Player", {}).get("product", "") and item.get("type") in ("movie", "episode"):
+        if config.PLEX_PRODUCT.get(tv.kind(settings), "Plex") in item.get("Player", {}).get("product", "") and item.get("type") in ("movie", "episode"):
             title = item.get("title", "Unknown Movie")
             if item.get("grandparentTitle"):
                 title = f"{item['grandparentTitle']}: {title}"

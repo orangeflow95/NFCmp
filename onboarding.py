@@ -1,8 +1,9 @@
 # onboarding.py
-# First-time setup. With no saved settings, or if the saved Wi-Fi can't be
+# First-time setup. With no saved Wi-Fi, or if the saved Wi-Fi can't be
 # joined, the player opens its own Wi-Fi network. Joining it on a phone pops up
-# a setup page for the home Wi-Fi, the Roku and a media server. Settings are saved to
-# settings.json on the board's flash.
+# a page that asks only for the home Wi-Fi. Everything else (the TV, Google TV
+# pairing, a media server) is set up afterwards in the NFCMP app (see api.py).
+# Settings are saved to settings.json on the board's flash.
 import json
 import os
 import socket
@@ -14,8 +15,6 @@ import web
 SETTINGS_FILE = "settings.json"
 SETUP_FLAG_FILE = "setup.flag" # Written by the link page's "Change settings" button
 AP_NAME = "NFC Movie Player"
-FIELDS = ("wifi_ssid", "wifi_password", "roku_ip", "media_server", "server_url", "server_user", "server_password")
-SECRET_FIELDS = ("wifi_password", "server_password") # Left blank on the form = keep the saved value
 SERVERS = {"jellyfin": "Jellyfin", "plex": "Plex"}
 SERVER_KEYS = ("media_server", "server_url", "server_user", "server_password", "server_token")
 PORTAL_TIMEOUT_S = 300 # With saved settings, give up after this long without a visit and retry the Wi-Fi
@@ -23,9 +22,13 @@ PORTAL_TIMEOUT_S = 300 # With saved settings, give up after this long without a 
 def load_settings():
     try:
         with open(SETTINGS_FILE) as f:
-            return json.load(f)
+            settings = json.load(f)
     except (OSError, ValueError):
         return {}
+    if "roku_ip" in settings: # Saved before the player supported other TVs
+        settings.setdefault("tv", "roku")
+        settings.setdefault("tv_ip", settings.pop("roku_ip"))
+    return settings
 
 def save_settings(settings):
     with open(SETTINGS_FILE, "w") as f:
@@ -44,22 +47,6 @@ def setup_requested():
         return True
     except OSError:
         return False
-
-def discover_roku(timeout_ms=3000):
-    """Finds a Roku on the network with SSDP. Returns its IP, or None."""
-    search = b'M-SEARCH * HTTP/1.1\r\nHost: 239.255.255.250:1900\r\nMan: "ssdp:discover"\r\nST: roku:ecp\r\n\r\n'
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        sock.settimeout(timeout_ms / 1000)
-        sock.sendto(search, socket.getaddrinfo("239.255.255.250", 1900)[0][-1])
-        while True:
-            for line in sock.recv(1024).decode().split("\r\n"):
-                if line.lower().startswith("location:"): # LOCATION: http://192.168.1.20:8060/
-                    return line.split("//", 1)[1].split(":")[0].split("/")[0]
-    except OSError:
-        return None
-    finally:
-        sock.close()
 
 def scan_networks(sta):
     """Returns nearby Wi-Fi names, strongest first."""
@@ -107,63 +94,26 @@ class CaptiveDNS:
             pass
 
 def form_page(settings, networks, error):
-    value = lambda key: web.escape(settings.get(key, ""))
-    keep = " (blank keeps the saved one)"
-    signed_in = " (blank keeps you signed in)" if settings.get("server_token") else ""
     options = "".join(f'<option value="{web.escape(name)}">' for name in networks)
-    servers = "".join(
-        f'<option value={key}{" selected" if settings.get("media_server") == key else ""}>{name}</option>'
-        for key, name in [("", "None")] + list(SERVERS.items())
-    )
+    keep = " (blank keeps the saved one)" if settings.get("wifi_password") else ""
     error = f"<p class=e>{web.escape(error)}</p>" if error else ""
-    return f"""<h2>Set up your movie player</h2>{error}
+    return f"""<h2>Connect your movie player</h2>{error}
+<p>Pick your home Wi-Fi. Once the player is on it, the NFCMP app finds it and sets up the rest.</p>
 <form method=post action=/save>
-<h3>Wi-Fi</h3>
-<input class=t name=wifi_ssid list=nets value="{value('wifi_ssid')}" placeholder="Wi-Fi name" required autocapitalize=off autocorrect=off>
+<input class=t name=wifi_ssid list=nets value="{web.escape(settings.get('wifi_ssid', ''))}" placeholder="Wi-Fi name" required autocapitalize=off autocorrect=off>
 <datalist id=nets>{options}</datalist>
-<input class=t type=password name=wifi_password placeholder="Wi-Fi password{keep if settings.get('wifi_password') else ''}">
-<h3>Roku</h3>
-<input class=t name=roku_ip value="{value('roku_ip')}" placeholder="Roku IP address" inputmode=decimal>
-<p class=h>Leave blank to find it automatically. On the Roku: Settings → Network → About.</p>
-<h3>Personal media server (optional)</h3>
-<select class=t name=media_server id=ms onchange=sv()>{servers}</select>
-<p class=h>Lets the NFCMP app search your library, and lets a blank card learn what you start playing on the TV.</p>
-<div id=srv>
-<input class=t name=server_url value="{value('server_url')}" placeholder="Server address" autocapitalize=off autocorrect=off>
-<p class=h>Leave blank to find it automatically.</p>
-<input class=t name=server_user id=su value="{value('server_user')}" autocapitalize=off autocorrect=off>
-<input class=t type=password name=server_password id=sp>
-<p class=h id=sh></p>
-</div>
-<button class=t>Save and connect</button></form>
-<script>function sv(){{var p=ms.value=="plex";srv.hidden=!ms.value;
-su.placeholder=p?"Plex email or username":"Jellyfin username";
-sp.placeholder=(p?"Plex":"Jellyfin")+" password{signed_in}";
-sh.textContent=p?"Your plex.tv account. Two-step verification isn't supported yet.":"The account you use in the Jellyfin app on the TV.";}}sv()</script>"""
+<input class=t type=password name=wifi_password placeholder="Wi-Fi password{keep}">
+<p class=h>The player needs a 2.4 GHz network. Most home Wi-Fi has one.</p>
+<button class=t>Connect</button></form>"""
 
 def apply_form(settings, form):
     """Returns the settings updated from the submitted form, and a problem with them or None."""
     new = dict(settings)
-    for key in FIELDS:
-        value = form.get(key, "")
-        if key not in SECRET_FIELDS:
-            new[key] = value.strip()
-        elif value:
-            new[key] = value
-    server = new["media_server"]
-    if server not in SERVERS:
-        for key in SERVER_KEYS:
-            new.pop(key, None)
-        return new, None
-    url = new["server_url"].rstrip("/")
-    if url and not url.startswith("http"):
-        url = "http://" + url
-    new["server_url"] = url
-    if form.get("server_password") or any((new.get(key) or "") != (settings.get(key) or "") for key in SERVER_KEYS[:3]):
-        new.pop("server_token", None) # Sign in again on the next start
-        new["server_password"] = form.get("server_password", "")
-    if not new["server_user"] and "server_token" not in new:
-        return new, f"Enter your {SERVERS[server]} username."
+    new["wifi_ssid"] = form.get("wifi_ssid", "").strip()
+    if form.get("wifi_password"): # Blank keeps the saved password
+        new["wifi_password"] = form["wifi_password"]
+    if not new["wifi_ssid"]:
+        return new, "Pick your Wi-Fi network."
     return new, None
 
 def run_portal(settings, error=None):
@@ -204,9 +154,10 @@ def run_portal(settings, error=None):
                         settings = new
                         save_settings(settings)
                         saved = True
-                        web.send(client, "Saved", f"""<h2>✅ Saved</h2><p>The player is restarting and joining
-<b>{web.escape(settings['wifi_ssid'])}</b>. You can switch your phone back to your home Wi-Fi.</p>
-<p>If it can't connect, the <b>{AP_NAME}</b> network comes back so you can fix the settings.</p>""")
+                        web.send(client, "Saved", f"""<h2>✅ Connecting…</h2><p>The player is joining
+<b>{web.escape(settings['wifi_ssid'])}</b>.</p>
+<p><b>Next:</b> switch your phone back to your home Wi-Fi and open the <b>NFCMP</b> app. It finds the player and walks you through choosing your TV.</p>
+<p class=h>If the password was wrong, the <b>{AP_NAME}</b> network comes back in a minute so you can try again.</p>""")
                 else:
                     web.send(client, "Set up", form_page(settings, networks, error))
             except OSError:

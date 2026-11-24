@@ -1,5 +1,5 @@
 # Runs on an ESP32-S3 with MicroPython and a PN532 NFC reader over I2C.
-# Tap a linked card: the TV turns on and plays what's linked to it.
+# Tap a linked card: the TV (Roku or Google TV, see tv.py) turns on and plays what's linked to it.
 # Each card holds its own record (card.py). The iPhone app picks a title and the
 # next card tapped gets it written. A blank card can also learn from the media
 # server: tap it, then start something in Jellyfin on the TV.
@@ -8,24 +8,20 @@ import json
 import time
 import network
 from machine import I2C, Pin
+import api
 import card
 import config
 import onboarding
 import servers
+import tv
 import web
 from pn532 import PN532
 
-try:
-    import requests
-except ImportError:
-    import urequests as requests
-
 CARDS_FILE = "cards.json"
-MEDIA_TYPES = {"Movie": "movie", "Episode": "episode"} # Jellyfin item type -> Roku deep link mediaType
 WIFI_TIMEOUT_MS = 20000
 HOSTNAME = "nfc-player" # Reachable as http://nfc-player.local/
 
-settings = onboarding.load_settings() # Wi-Fi, Roku and media server, entered in setup mode
+settings = onboarding.load_settings() # Wi-Fi, TV and media server, entered in setup mode
 
 def load_cards():
     try:
@@ -58,43 +54,28 @@ def connect_wifi():
     print(f"Wi-Fi connected: {wlan.ifconfig()[0]}")
     return wlan
 
-def find_roku():
-    print("Looking for the Roku...")
-    ip = onboarding.discover_roku()
+def find_tv():
+    name = tv.name(settings)
+    print(f"Looking for the {name}...")
+    ip = tv.discover(settings)
     if ip:
-        settings["roku_ip"] = ip
+        settings["tv_ip"] = ip
         onboarding.save_settings(settings)
-        print(f"Found the Roku at {ip}.")
+        print(f"Found the {name} at {ip}.")
     else:
-        print("No Roku found. Is it on the same Wi-Fi? Enter its IP in setup mode (http://<player ip>/setup).")
+        print(f"No {name} found. Is it on the same Wi-Fi? Choose it again in the NFCMP app.")
 
-def roku_post(path):
-    """Sends a Roku ECP POST command."""
-    r = requests.post(f"http://{settings['roku_ip']}:8060/{path}", headers={"Content-Length": "0"}, timeout=5)
-    r.close()
-
-def wake_tv():
-    roku_post("keypress/PowerOn")
-    time.sleep(3) # Wait for TV to wake up
-
-def play(entry):
-    """Turns on the TV and deep links the card's app straight into its movie or show.
-
-    The Jellyfin Roku client doesn't support remote control through the
-    Jellyfin Sessions API, so playback is started with Roku ECP deep linking.
-    """
-    print(f"▶ Playing '{entry['title']}'")
-    app_id = entry.get("app", config.JELLYFIN_APP_ID)
-    media_type = entry.get("media_type") or MEDIA_TYPES.get(entry.get("type"), "movie")
+def play(fields):
+    """Turns on the TV and opens the card's title. fields come from card.parse()."""
+    print(f"▶ Playing '{fields.get('t') or fields['id']}' on the {tv.name(settings)}")
     try:
-        wake_tv()
-        roku_post(f"launch/{app_id}?contentId={entry['id']}&mediaType={media_type}")
+        tv.play(settings, fields)
     except Exception as e:
-        print(f"Roku Error: {e}")
+        print(f"TV Error: {e}")
 
-SETUP_CONFIRM = f"""<h2>Change settings</h2><p>The player will restart and open its own Wi-Fi network,
-<b>{onboarding.AP_NAME}</b>. Join it on your phone to change the Wi-Fi, Roku or media server settings.</p>
-<form action=/setup><button class=t name=confirm value=1>Restart in setup mode</button></form>"""
+SETUP_CONFIRM = f"""<h2>Change Wi-Fi</h2><p>The player will restart and open its own Wi-Fi network,
+<b>{onboarding.AP_NAME}</b>. Join it on your phone to pick a different Wi-Fi. The TV and media server are set up in the NFCMP app.</p>
+<form action=/setup><button class=t name=confirm value=1>Restart in Wi-Fi setup</button></form>"""
 SETUP_RESTARTING = f"<h2>Restarting…</h2><p>Join the <b>{onboarding.AP_NAME}</b> Wi-Fi network on your phone.</p>"
 
 def library_results(text):
@@ -106,14 +87,14 @@ def library_results(text):
     return {"server": settings.get("media_server") if items is not None else None, "items": items or []}
 
 class PlayerPage:
-    """The player's tiny web server: a status page, /setup, and for the iPhone app
-    /library (search the media server) and /write (write a record to the next card tapped).
+    """The player's tiny web server: a status page, /setup (Wi-Fi), and for the iPhone app
+    /library (search the media server), /write (write a record to the next card tapped)
+    and /api/ (finish setting up the player; see api.py).
     """
 
-    def __init__(self, ip, port, problem=None):
+    def __init__(self, ip, port):
         self.url = f"http://{ip}/" if port == 80 else f"http://{ip}:{port}/"
         self.sock = web.listen(port)
-        self.problem = problem # Shown on the status page, e.g. a media server sign-in that failed
         self.pending = None # (record text, deadline) while waiting for a card to write
         self.write_state = {"state": "idle"} # What GET /write reports to the app
 
@@ -133,6 +114,13 @@ class PlayerPage:
         print(f"📝 Tap a card to write '{self.write_state['title']}' to it.")
         return self.write_state
 
+    def status(self):
+        problems = [p for p in (api.server_problem, tv.problem(settings)) if p]
+        html = "".join(f"<p class=e>⚠️ {web.escape(p)}</p>" for p in problems)
+        if tv.kind(settings) and settings.get("tv_ip"):
+            html += f"<p>TV: {tv.name(settings)} at {settings['tv_ip']}.</p>"
+        return html
+
     def poll(self):
         """Answers one waiting request, if any."""
         client = web.accept(self.sock)
@@ -144,14 +132,17 @@ class PlayerPage:
             if path == "/setup":
                 restart = bool(form.get("confirm"))
                 web.send(client, "Settings", SETUP_RESTARTING if restart else SETUP_CONFIRM)
+            elif path.startswith("/api/"):
+                reply = api.handle(settings, method, path, form)
+                web.send_json(client, reply)
+                restart = path == "/api/wifi" and reply.get("ok")
             elif path == "/library":
                 web.send_json(client, library_results(form.get("q", "")))
             elif path == "/write":
                 web.send_json(client, self.start_write(form) if method == "POST" else self.write_state)
             else:
-                problem = f"<p class=e>⚠️ {web.escape(self.problem)}</p>" if self.problem else ""
-                web.send(client, "NFC Movie Player", f"""<h2>NFC Movie Player</h2>{problem}
-<p>Pick titles for your cards in the iPhone app.</p><p><a href=/setup>Change settings</a></p>""")
+                web.send(client, "NFC Movie Player", f"""<h2>NFC Movie Player</h2>{self.status()}
+<p>Set up the TV and pick titles for your cards in the NFCMP app.</p><p><a href=/setup>Change Wi-Fi</a></p>""")
         except OSError:
             pass
         finally:
@@ -159,7 +150,8 @@ class PlayerPage:
         if restart:
             onboarding.request_setup()
 
-    def expire_write(self):
+    def expire(self):
+        """Ends a card write nobody finished."""
         if self.pending and time.ticks_diff(self.pending[1], time.ticks_ms()) <= 0:
             self.pending = None
             self.write_state = {"state": "expired"}
@@ -181,14 +173,14 @@ def learn(uid, cards, taps, page):
     Only the media server (Jellyfin) can say what's playing. Cards for streaming
     apps are linked from the iPhone app instead.
     """
-    if not servers.roku_app(settings):
+    if not servers.signed_in(settings):
         print("Blank card. Link it to a title from the iPhone app.")
         return
     print(f"New card! Start something in the media server app on the TV within {config.LEARN_TIMEOUT_S}s to lock it to this card.")
     try:
-        wake_tv()
+        tv.wake(settings)
     except Exception as e:
-        print(f"Roku Error: {e}")
+        print(f"TV Error: {e}")
 
     # Ignore whatever is already playing, unless it gets stopped and started again
     try:
@@ -264,12 +256,12 @@ def handle_tap(uid, reader, cards, taps, page):
             print(f"⚠️ {reason}")
             return
         entry = card.to_card(fields)
-        if cards.get(uid) != entry: # Keep a list of cards for the app
+        if cards.get(uid) != entry: # Keep a list of cards seen
             cards[uid] = entry
             save_cards(cards)
-        play(entry)
-    elif uid in cards:
-        play(cards[uid])
+        play(fields)
+    elif uid in cards and card.fields_of(cards[uid]):
+        play(card.fields_of(cards[uid]))
         save_to_card(reader, cards[uid]) # A card from before cards held their own records
     else:
         learn(uid, cards, taps, page)
@@ -301,15 +293,18 @@ def main():
     wlan = connect_wifi()
     if not wlan:
         onboarding.run_portal(settings, f"Couldn't join {settings['wifi_ssid']}. Check the name and password.")
-    if not settings.get("roku_ip"):
-        find_roku()
+    if tv.kind(settings) and not settings.get("tv_ip"):
+        find_tv()
+    elif not tv.kind(settings):
+        print("No TV chosen yet. Open the NFCMP app to finish setting up.")
     ip, mask = wlan.ifconfig()[:2]
-    problem = servers.set_up(settings, servers.broadcast_address(ip, mask))
-    if problem:
-        print(f"⚠️ {problem}")
+    api.broadcast = servers.broadcast_address(ip, mask)
+    api.server_problem = servers.set_up(settings, api.broadcast)
+    if api.server_problem:
+        print(f"⚠️ {api.server_problem}")
     reader = PN532(I2C(0, sda=Pin(config.NFC_SDA_PIN), scl=Pin(config.NFC_SCL_PIN), freq=100000))
     print(f"NFC reader ready: {reader.firmware}")
-    page = PlayerPage(ip, config.WEB_PORT, problem)
+    page = PlayerPage(ip, config.WEB_PORT)
     taps = TapReader(reader)
     cards = load_cards()
     print(f"{len(cards)} card(s) linked. Waiting for a tap...")
@@ -323,7 +318,8 @@ def main():
             handle_tap(uid, reader, cards, taps, page)
             print("Waiting for a tap...")
         page.poll()
-        page.expire_write()
+        page.expire()
+        api.tick(settings)
         time.sleep_ms(100)
 
 main()

@@ -1,7 +1,8 @@
 # card.py
 # What a card holds: one NDEF text record with versioned key=value pairs, e.g.
 #   v1;svc=netflix;type=show;id=81591296;t=Nobody Wants This
-# svc picks the Roku app (config.SERVICES); t (title) is optional.
+# svc picks the app (config.SERVICES); t (title) is optional. Nothing on the card
+# names a TV, so the same card plays on a Roku or a Google TV.
 # Cards are NTAG215 stickers: 4-byte pages, user memory from page 4.
 import config
 
@@ -31,9 +32,9 @@ def problem(fields):
     return f"The {fields['svc']} record is missing {', '.join(missing)}." if missing else None
 
 def to_card(fields):
-    """The play() dict for a record's fields."""
+    """The cards.json entry for a record's fields."""
     return {
-        "app": config.SERVICES[fields["svc"]]["app"],
+        "app": config.SERVICES[fields["svc"]]["roku"],
         "id": fields["id"],
         "title": fields.get("t") or fields["id"],
         "media_type": MEDIA_TYPES.get(fields.get("type"), "movie"),
@@ -45,12 +46,17 @@ def record_from_card(card):
         svc = "jellyfin"
         kind = {"Movie": "movie", "Episode": "episode", "Series": "show"}.get(card.get("type"), "movie")
     else:
-        svc = next((name for name, s in config.SERVICES.items() if s["app"] == card["app"]), None)
+        svc = next((name for name, s in config.SERVICES.items() if s["roku"] == card["app"]), None)
         kind = {"series": "show"}.get(card.get("media_type"), card.get("media_type") or "movie")
     if not svc:
         return None
     title = card.get("title", "").replace(";", ",")
     return f"v1;svc={svc};type={kind};id={card['id']};t={title}"
+
+def fields_of(card):
+    """The record fields for a cards.json entry, or None."""
+    record = record_from_card(card)
+    return parse(record) if record else None
 
 def encode(text):
     """The bytes for user memory: an NDEF message TLV holding one text record, then the terminator."""

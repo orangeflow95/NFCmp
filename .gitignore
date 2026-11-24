@@ -7,3 +7,7 @@ __pycache__/
 CLAUDE.md
 ios/NFCPlayer.xcodeproj/xcuserdata/
 ios/NFCPlayer.xcodeproj/project.xcworkspace/xcuserdata/
+tv_cert.der
+tv_key.der
+tv_cert.pem
+tv_key.pem
